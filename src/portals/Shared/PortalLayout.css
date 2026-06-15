@@ -1,0 +1,507 @@
+/* Unified Layout Wrapper and Main Panels */
+.layout-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: row;
+}
+
+.layout-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.main-content {
+  flex: 1;
+  background: var(--bg-primary);
+  animation: fadeIn 0.4s ease-out;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+/* Sidebar Navigation */
+.sidebar {
+  width: 90px;
+  background: white;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
+}
+
+.sidebar-menu {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb {
+  background: #E2E8F0;
+  border-radius: 10px;
+}
+
+.sidebar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 5px;
+  text-decoration: none;
+  color: var(--text-secondary);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  gap: 6px;
+  text-align: center;
+}
+
+.sidebar-icon {
+  transition: all 0.3s ease;
+}
+
+.sidebar-label {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.sidebar-item:hover {
+  background: #f8fafc;
+  color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+.sidebar-item.active {
+  background: #f0fdf4;
+  color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.1);
+}
+
+.sidebar-item.active .sidebar-icon {
+  color: #16a34a;
+}
+
+/* Sidebar Footer Buttons */
+.sidebar-footer {
+  padding: 15px 10px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-switch-btn,
+.sidebar-logout-btn {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 12px 5px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-switch-btn {
+  color: #3b82f6;
+}
+
+.sidebar-switch-btn:hover {
+  background: #eff6ff;
+  transform: translateY(-2px);
+}
+
+.sidebar-logout-btn {
+  color: #ef4444;
+}
+
+.sidebar-logout-btn:hover {
+  background: #fef2f2;
+  transform: translateY(-2px);
+}
+
+.sidebar-switch-btn .sidebar-label,
+.sidebar-logout-btn .sidebar-label {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* Top Header styles matching Super Admin */
+.header {
+  height: 60px;
+  background: var(--primary-color);
+  padding: 0 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.header-logo-img {
+  height: 54px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+/* Role / Unit Badge */
+.admin-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(90deg, #F9D423 0%, #FF4E50 100%);
+  color: #1A0B48;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 15px rgba(255, 78, 80, 0.2);
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 0 20px;
+  }
+}
+
+/* Global Header Printer Status Button Styles inside Portal Header */
+.header-printer-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 10px;
+}
+
+.header-print-status-btn {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1);
+  outline: none;
+  font-family: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.header-print-status-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+  color: #FFFFFF;
+}
+
+.header-print-status-btn.connected.ble {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10B981;
+  color: #10B981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+}
+
+.header-print-status-btn.connected.ble:hover {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34D399;
+}
+
+.header-print-status-btn.connected.usb {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: #3B82F6;
+  color: #3B82F6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+}
+
+.header-print-status-btn.connected.usb:hover {
+  background: rgba(59, 130, 246, 0.25);
+  color: #60A5FA;
+}
+
+@media (max-width: 640px) {
+  .header-printer-status-bar {
+    display: none; /* Hide on extremely small viewports to prevent layout wrapping */
+  }
+}
+
+/* Printer Modal Styles specifically for PortalLayout */
+.portal-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9000;
+}
+
+.portal-custom-modal {
+  background: #FFFFFF;
+  width: 400px;
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.portal-modal-icon-box {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.portal-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.portal-modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.portal-modal-btn {
+  flex: 1;
+  height: 36px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.portal-modal-btn.cancel {
+  background: #EDF2F7;
+  color: var(--text-secondary);
+}
+
+.portal-modal-btn.cancel:hover {
+  background: #E2E8F0;
+}
+
+.portal-modal-btn.confirm {
+  background: var(--primary-color);
+  color: #FFFFFF;
+}
+
+.portal-modal-btn.confirm:hover {
+  background: var(--primary-light);
+}
+
+.portal-ws-save-btn {
+  background: var(--primary-color);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  height: 36px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.portal-ws-save-btn:hover {
+  background: var(--primary-light);
+}
+
+/* --- MOBILE & TABLET DRAWER PORTAL RESPONSIVE STYLES --- */
+
+/* Sidebar Header Mobile Hidden by default */
+.sidebar-header-mobile {
+  display: none;
+}
+
+/* Header Hamburger Toggle button */
+.header-menu-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #FFFFFF;
+  padding: 8px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  margin-right: 5px;
+}
+
+.header-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Sidebar overlay on mobile/tablet */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 42, 27, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 150;
+  animation: overlayFadeIn 0.3s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 1024px) {
+  .header-menu-btn {
+    display: flex;
+  }
+
+  .sidebar {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 280px !important;
+    height: 100vh !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1) !important;
+    z-index: 200 !important;
+  }
+
+  .sidebar.drawer-open {
+    transform: translateX(0) !important;
+  }
+
+  .sidebar-header-mobile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .sidebar-mobile-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .sidebar-close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+  }
+
+  .sidebar-close-btn:hover {
+    background-color: #f1f5f9;
+    color: var(--text-primary);
+  }
+
+  .sidebar-menu {
+    padding: 20px 16px;
+  }
+
+  .sidebar-item {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 14px 20px !important;
+    gap: 16px !important;
+    text-align: left !important;
+    width: 100% !important;
+  }
+
+  .sidebar-label {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    line-height: 1.4 !important;
+  }
+
+  .sidebar-logout-btn,
+  .sidebar-switch-btn {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 14px 20px !important;
+    gap: 16px !important;
+    width: 100% !important;
+  }
+
+  .sidebar-logout-btn .sidebar-label,
+  .sidebar-switch-btn .sidebar-label {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+  }
+  
+  .sidebar-footer {
+    padding: 15px 16px;
+  }
+}
+

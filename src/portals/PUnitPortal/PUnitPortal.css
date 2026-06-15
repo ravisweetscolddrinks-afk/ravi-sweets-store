@@ -1,0 +1,601 @@
+.pu-portal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+  min-height: calc(100vh - 60px);
+}
+
+.pu-portal-content h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 20px;
+}
+
+/* Orders Layout */
+.pu-orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.pu-order-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.pu-order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+  border-color: var(--primary-color);
+}
+
+.pu-order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
+.pu-order-header h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.pu-customer-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+.pu-customer-phone {
+  font-size: 11px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.pu-delivery-target {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin: 6px 0 0 0;
+}
+
+/* Status Badges */
+.pu-status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.pu-status-badge.new { background: #e0f2fe; color: #0369a1; }
+.pu-status-badge.moved_to_manufacturing { background: #fef3c7; color: #92400e; }
+.pu-status-badge.preparation_complete { background: #dcfce7; color: #166534; }
+.pu-status-badge.moved_to_packing { background: #f3e8ff; color: #6b21a8; }
+.pu-status-badge.packing_complete { background: #d1fae5; color: #065f46; }
+.pu-status-badge.moved_to_store { background: #ffedd5; color: #9a3412; }
+.pu-status-badge.delivered { background: #ecfdf5; color: #065f46; }
+
+.pu-instructions {
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #475569;
+  border-left: 3px solid #6b21a8;
+  margin-bottom: 12px;
+}
+
+.pu-dropdown-toggle-btn:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Empty State */
+.pu-empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 40px;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 1px dashed #e2e8f0;
+  color: #64748b;
+}
+
+.pu-empty-icon {
+  color: #94a3b8;
+  margin-bottom: 15px;
+}
+
+.pu-empty-state h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #334155;
+  margin: 0 0 6px 0;
+}
+
+.pu-empty-state p {
+  font-size: 13px;
+  margin: 0;
+}
+
+.pu-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  color: #64748b;
+}
+
+/* Bluetooth Thermal Printer Banner */
+.pu-bt-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 12px 20px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.pu-bt-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.pu-bt-indicator.disconnected {
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.pu-bt-indicator.connected {
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+  animation: pulse 2s infinite;
+}
+
+.pu-bt-btn {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.pu-bt-btn.connect {
+  background: var(--primary-color);
+  color: white;
+}
+
+.pu-bt-btn.connect:hover {
+  background: var(--primary-color-hover, #0f766e);
+}
+
+.pu-bt-btn.disconnect {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.pu-bt-btn.disconnect:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
+/* Mini action buttons in Card instructions */
+.pu-mini-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  outline: none;
+}
+
+.pu-mini-action-btn.print {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.pu-mini-action-btn.print:hover {
+  background: #dcfce7;
+}
+
+.pu-mini-action-btn.edit {
+  background: #fdf4ff;
+  color: #86198f;
+  border: 1px solid #f5d0fe;
+}
+
+.pu-mini-action-btn.edit:hover {
+  background: #f3e8ff;
+}
+
+.pu-packing-boxes-list {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid #f3e8ff;
+  padding-top: 6px;
+}
+
+.pu-packing-box-item {
+  font-size: 12px;
+  color: #475569;
+  background: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #f1f5f9;
+}
+
+.pu-packing-box-item strong {
+  color: var(--primary-color);
+  margin-right: 5px;
+}
+
+/* Modals Overlay & Structure */
+.pu-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 20px;
+}
+
+.pu-modal-content {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  overflow: hidden;
+}
+
+.pu-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 12px;
+}
+
+.pu-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.pu-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.pu-modal-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.pu-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding-right: 4px;
+  max-height: calc(90vh - 120px);
+}
+
+.pu-add-box-btn {
+  display: inline-flex;
+  align-items: center;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pu-add-box-btn:hover {
+  background: #dcfce7;
+}
+
+.pu-modal-boxes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.pu-modal-box-row {
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  position: relative;
+}
+
+.pu-remove-box-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.pu-remove-box-btn:hover {
+  background: #fee2e2;
+}
+
+.pu-modal-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+  box-sizing: border-box;
+  resize: none;
+  font-family: inherit;
+  outline: none;
+}
+
+.pu-modal-textarea:focus {
+  border-color: var(--primary-color);
+}
+
+.pu-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pu-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+  margin-top: 5px;
+}
+
+.pu-modal-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.pu-modal-btn.cancel {
+  background: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.pu-modal-btn.cancel:hover {
+  background: #f1f5f9;
+}
+
+.pu-modal-btn.save {
+  background: var(--primary-color);
+  color: white;
+}
+
+.pu-modal-btn.save:hover {
+  background: var(--primary-color-hover, #0f766e);
+}
+
+.pu-modal-btn.rescan {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  margin-right: auto;
+}
+
+.pu-modal-btn.rescan:hover {
+  background: #dcfce7;
+}
+
+/* Bluetooth Scanner Body */
+.pu-bt-scanner-body {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pu-bt-scanning-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+}
+
+.pu-bt-devices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.pu-bt-device-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pu-bt-device-item:hover {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.pu-bt-device-avatar {
+  width: 32px;
+  height: 32px;
+  background: #f1f5f9;
+  color: #475569;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.pu-bt-device-item:hover .pu-bt-device-avatar {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pu-bt-device-item .name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.pu-bt-device-item .type {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.pu-bt-device-item .rssi {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* Micro-animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: .6;
+    transform: scale(1.05);
+  }
+}
+
+/* Edit Order Items Modal Specifics */
+.pu-edit-order-input {
+  transition: all 0.2s ease-in-out;
+  background-color: #ffffff;
+}
+
+.pu-edit-order-input:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+  background-color: #f0fdfa;
+}
+
+.pu-edit-order-items-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pu-edit-order-items-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.pu-edit-order-items-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.pu-edit-order-items-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+@media (max-width: 480px) {
+  .pu-edit-order-item-row {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  
+  .pu-edit-order-item-row div {
+    text-align: left !important;
+  }
+  
+  .pu-edit-order-input {
+    max-width: 120px;
+  }
+}

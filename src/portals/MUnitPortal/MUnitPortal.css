@@ -1,0 +1,603 @@
+.mu-portal-content {
+  background: #f8fafc;
+  border-radius: 20px;
+  padding: 35px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  min-height: calc(100vh - 60px);
+}
+
+.mu-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 50vh;
+  gap: 15px;
+  color: #64748b;
+}
+
+.mu-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  background: white;
+  padding: 20px 25px;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.01);
+  border: 1px solid #edf2f7;
+}
+
+.mu-portal-content h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.mu-subtitle {
+  color: #64748b;
+  font-size: 14px;
+  margin: 0;
+  font-weight: 500;
+}
+
+.mu-badge {
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid #bfdbfe;
+}
+
+/* Empty State */
+.mu-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  padding: 60px 40px;
+  text-align: center;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.01);
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+}
+
+.mu-empty-icon {
+  color: #10b981;
+  margin-bottom: 20px;
+}
+
+.mu-empty-state h3 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.mu-empty-state p {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Worksheet Grid */
+.mu-worksheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 25px;
+}
+
+.mu-worksheet-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #edf2f7;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.015);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.mu-worksheet-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.03);
+}
+
+.mu-card-body {
+  padding: 24px;
+  flex: 1;
+}
+
+.mu-card-main-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 12px;
+}
+
+.mu-item-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.mu-item-qty {
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.mu-item-description {
+  font-size: 13px;
+  color: #475569;
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin: 0 0 18px 0;
+  line-height: 1.4;
+  border-left: 3px solid #3b82f6;
+}
+
+.mu-card-orders-breakdown {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 15px;
+}
+
+.mu-breakdown-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.mu-breakdown-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mu-breakdown-pill {
+  font-size: 12px;
+  background: #f8fafc;
+  color: #475569;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  font-weight: 500;
+}
+
+.mu-breakdown-pill .bold {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mu-card-footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #edf2f7;
+}
+
+.mu-btn-complete {
+  width: 100%;
+  padding: 10px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.mu-btn-complete:hover {
+  background: #059669;
+}
+
+/* Assigned Orders Table */
+.mu-orders-table-wrapper {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.015);
+  border: 1px solid #edf2f7;
+}
+
+.mu-orders-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.mu-orders-table th {
+  background: #f8fafc;
+  padding: 16px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.mu-orders-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #edf2f7;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.mu-orders-table tr:hover td {
+  background: #f8fafc;
+}
+
+.mu-order-id-cell {
+  font-weight: 700;
+  color: #1e3a8a;
+  cursor: pointer;
+}
+
+.mu-id-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mu-customer-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.mu-customer-info .name {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mu-customer-info .phone {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.mu-btn-toggle {
+  background: #f1f5f9;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mu-btn-toggle:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Accordion Content */
+.mu-accordion-row td {
+  padding: 0 !important;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.mu-accordion-content {
+  background: #f8fafc;
+  padding: 24px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.mu-accordion-content h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin: 0 0 12px 0;
+}
+
+.mu-subtable {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01);
+  border: 1px solid #edf2f7;
+}
+
+.mu-subtable th {
+  background: #f1f5f9;
+  padding: 10px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.mu-subtable td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #edf2f7;
+  font-size: 13px;
+  color: #334155;
+  background: white !important;
+}
+
+.mu-select-status {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: white;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.mu-select-status:focus {
+  border-color: #3b82f6;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Today Worksheet Sub Navigation Tabs */
+.mu-sub-tabs {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+  gap: 4px;
+}
+
+.mu-sub-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mu-sub-tab-btn:hover {
+  color: #0f172a;
+}
+
+.mu-sub-tab-btn.active {
+  background: white;
+  color: #10b981;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Date Filter Bar for Worksheet */
+.mu-date-filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.mu-filter-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mu-filter-cal-icon {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.mu-filter-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.mu-date-picker-input {
+  height: 36px;
+  padding: 0 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  outline: none;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.mu-date-picker-input:focus {
+  border-color: #10b981;
+  background: #f0fdf4;
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.05);
+}
+
+.mu-today-reset-btn {
+  height: 36px;
+  padding: 0 14px;
+  background: white;
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mu-today-reset-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+/* Completed Card Stamps */
+.mu-worksheet-card.completed-card {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.mu-worksheet-card.completed-card .mu-item-qty {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.mu-worksheet-card.completed-card .mu-item-description {
+  border-left-color: #10b981;
+  background: #ffffff;
+}
+
+.mu-completed-stamp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #10b981;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 10px;
+  background: #d1fae5;
+  border-radius: 8px;
+  border: 1.5px dashed #10b981;
+}
+
+/* Checklist Styles in Today Worksheet Card */
+.mu-orders-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.mu-checklist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  transition: all 0.2s ease;
+}
+
+.mu-checklist-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.mu-checklist-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.mu-checklist-header-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mu-checklist-order-id {
+  font-size: 13px;
+  font-weight: 800;
+  color: #1e3a8a;
+}
+
+.mu-checklist-qty {
+  font-size: 12px;
+  font-weight: 800;
+  color: #d97706;
+  background: #fffbeb;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid #fef3c7;
+}
+
+.mu-checklist-customer {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.mu-checklist-check-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1.5px solid #10b981;
+  color: #10b981;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mu-checklist-check-btn:hover {
+  background: #10b981;
+  color: white;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+}
+
+/* Store Worksheet interactive rows */
+.mu-store-allocation-row {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mu-store-allocation-row:hover {
+  transform: scale(1.01);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+}
+
+.mu-store-allocation-row.completed:hover {
+  background: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+}
+

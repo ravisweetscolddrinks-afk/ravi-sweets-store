@@ -1,0 +1,117 @@
+.onb-loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f8fafc;
+}
+
+.onb-container {
+  min-height: 100vh;
+  background: #f8fafc;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.onb-header {
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  background: white;
+  padding: 20px 30px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+.onb-header h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.onb-header p {
+  color: #64748b;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.onb-logout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  color: #ef4444;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.onb-logout:hover {
+  background: #fee2e2;
+}
+
+.onb-grid {
+  width: 100%;
+  max-width: 1000px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 25px;
+}
+
+.onb-card {
+  background: white;
+  border-radius: 20px;
+  padding: 30px 25px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.onb-card .icon-box {
+  width: 70px;
+  height: 70px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.onb-card h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 5px 0;
+}
+
+.onb-card p {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Store Specific */
+.onb-card.store .icon-box { background: #eff6ff; color: #3b82f6; }
+.onb-card.store p { color: #3b82f6; }
+
+/* MUnit Specific */
+.onb-card.munit .icon-box { background: #f0fdf4; color: #16a34a; }
+.onb-card.munit p { color: #16a34a; }
+
+/* PUnit Specific */
+.onb-card.punit .icon-box { background: #fdf4ff; color: #c026d3; }
+.onb-card.punit p { color: #c026d3; }
