@@ -17,7 +17,9 @@ import {
   Clock, 
   CreditCard, 
   LifeBuoy,
-  X
+  X,
+  BarChart2,
+  Truck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './Sidebar.css';
@@ -27,6 +29,8 @@ export const menuItems = [
   { id: 'payments', label: 'Payments', icon: <CreditCard />, path: '/payments' },
   { id: 'orders', label: 'Orders', icon: <ShoppingBag />, path: '/orders' },
   { id: 'store-worksheet', label: 'Store Work Sheet', icon: <ClipboardList />, path: '/store-worksheet' },
+  { id: 'stock', label: 'Stock Analysis', icon: <BarChart2 />, path: '/stock' },
+  { id: 'vendors', label: 'Vendors', icon: <Truck />, path: '/vendors' },
   { id: 'items', label: 'Items', icon: <Box />, path: '/items' },
   { id: 'categories', label: 'Categories', icon: <Tag />, path: '/categories' },
   { id: 'stores', label: 'Stores', icon: <Store />, path: '/stores' },
