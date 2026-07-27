@@ -520,6 +520,8 @@ const StockAnalysis = () => {
                         onChange={e => setStockForm(p => ({ ...p, unit: e.target.value }))}>
                         <option value="Weight">Weight (kg)</option>
                         <option value="Piece">Piece (qty)</option>
+                        <option value="Litre">Litre (L/ml)</option>
+                        <option value="Packet">Packet (pkt)</option>
                       </select>
                     </div>
                     <div className="sa-input-group">

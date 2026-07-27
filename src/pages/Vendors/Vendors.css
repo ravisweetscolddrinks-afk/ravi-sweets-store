@@ -491,7 +491,7 @@
 
 .v-order-item-row-form {
   display: grid;
-  grid-template-columns: 1fr 70px 80px 32px;
+  grid-template-columns: 1.5fr 70px 110px 32px;
   gap: 6px;
   align-items: center;
   margin-bottom: 8px;
@@ -570,7 +570,7 @@
 /* Column headers for item rows */
 .v-col-headers {
   display: grid;
-  grid-template-columns: 1fr 70px 80px 32px;
+  grid-template-columns: 1.5fr 70px 110px 32px;
   gap: 6px;
   margin-bottom: 4px;
 }
@@ -659,5 +659,5 @@
   .v-form-panel { width: 100%; }
   .v-vendor-grid { grid-template-columns: 1fr; }
   .v-form-row { grid-template-columns: 1fr; }
-  .v-order-item-row-form { grid-template-columns: 1fr 60px 70px 32px; }
+  .v-order-item-row-form { grid-template-columns: 1fr 60px 95px 32px; }
 }

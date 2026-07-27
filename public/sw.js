@@ -99,11 +99,13 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - Network first strategy for dynamic assets, falling back to cache
 self.addEventListener('fetch', (event) => {
-  // Skip dynamic firebase/database or POST/PUT/DELETE requests
+  // Skip non-HTTP(S) schemes (e.g. chrome-extension://), POST/PUT/DELETE, and Firebase API requests
   if (
     event.request.method !== 'GET' ||
+    !event.request.url.startsWith('http') ||
     event.request.url.includes('firestore.googleapis.com') ||
-    event.request.url.includes('firebase')
+    event.request.url.includes('firebase') ||
+    event.request.url.includes('fcmregistrations.googleapis.com')
   ) {
     return;
   }

@@ -128,7 +128,7 @@ const Items = () => {
 
   const [formData, setFormData] = useState({
     name: '',
-    unit: 'Weight', // 'Weight' or 'Piece'
+    unit: 'Weight', // 'Weight', 'Piece', 'Litre', or 'Packet'
     price: '',
     mUnitId: '',
     categoryId: '',
@@ -379,6 +379,10 @@ const Items = () => {
           let unit = 'Weight';
           if (rawUnit.includes('pc') || rawUnit.includes('piece') || rawUnit.includes('qty') || rawUnit.includes('count')) {
             unit = 'Piece';
+          } else if (rawUnit.includes('litre') || rawUnit.includes('liter') || rawUnit.includes('ltr') || rawUnit === 'l' || rawUnit.includes('ml')) {
+            unit = 'Litre';
+          } else if (rawUnit.includes('packet') || rawUnit.includes('pkt') || rawUnit.includes('pack')) {
+            unit = 'Packet';
           }
 
           const rawMUnit = String(row[mUnitIdx] || '').trim();
@@ -438,11 +442,12 @@ const Items = () => {
 
   const downloadTemplate = () => {
     try {
-      const headers = ['Name', 'Price (INR)', 'Unit Type (Weight / Piece)', 'Manufacturing Unit', 'Category (Optional)'];
+      const headers = ['Name', 'Price (INR)', 'Unit Type (Weight / Piece / Litre / Packet)', 'Manufacturing Unit', 'Category (Optional)'];
       const examples = [
         ['Special Ghee Mysore Pak', '650', 'Weight', mUnits[0]?.name || 'Main Kitchen', categories[0]?.name || 'Sweets'],
-        ['Kaju Katli', '900', 'Weight', mUnits[0]?.name || 'Main Kitchen', categories[0]?.name || 'Sweets'],
-        ['Special Kara Boondi', '50', 'Piece', mUnits[1]?.name || mUnits[0]?.name || 'Savories Kitchen', categories[1]?.name || 'Snacks']
+        ['Fresh Cow Milk', '60', 'Litre', mUnits[0]?.name || 'Main Kitchen', categories[0]?.name || 'Dairy'],
+        ['Special Kara Boondi', '50', 'Piece', mUnits[1]?.name || mUnits[0]?.name || 'Savories Kitchen', categories[1]?.name || 'Snacks'],
+        ['Badam Milk Packet', '30', 'Packet', mUnits[0]?.name || 'Main Kitchen', categories[0]?.name || 'Drinks']
       ];
 
       let csvContent = headers.join(',') + '\n';
@@ -458,7 +463,7 @@ const Items = () => {
       csvContent += '--- HELP & DIRECTIONS ---\n';
       csvContent += `"Available Manufacturing Units (Match exactly): ${mUnits.map(mu => mu.name).join(' | ')}"\n`;
       csvContent += `"Available Categories (Match exactly): ${categories.map(cat => cat.name).join(' | ')}"\n`;
-      csvContent += 'Unit Type must be either: Weight (default) or Piece\n';
+      csvContent += 'Unit Type must be one of: Weight (default), Piece, Litre, or Packet\n';
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -732,7 +737,9 @@ const Items = () => {
                     label="Unit Type"
                     options={[
                       { value: 'Weight', label: 'Weight (kg/gm)' },
-                      { value: 'Piece', label: 'Piece (qty)' }
+                      { value: 'Piece', label: 'Piece (qty)' },
+                      { value: 'Litre', label: 'Litre (L/ml)' },
+                      { value: 'Packet', label: 'Packet (pkt)' }
                     ]}
                     value={formData.unit}
                     onChange={(val) => setFormData(prev => ({ ...prev, unit: val }))}

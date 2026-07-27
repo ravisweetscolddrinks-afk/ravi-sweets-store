@@ -14,15 +14,22 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Vendors.css';
 
+const getUnitShort = (unit) => {
+  if (unit === 'Weight') return 'kg';
+  if (unit === 'Litre') return 'ltr';
+  if (unit === 'Packet') return 'pkt';
+  return 'pcs';
+};
+
 /* ── Invoice Print ─────────────────────────────────────── */
 const printVendorInvoice = (order) => {
   const itemsHtml = (order.items || []).map((item, i) => `
     <tr>
       <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;">${i + 1}</td>
       <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;">${item.itemName}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:center;">${item.qty} ${item.unit === 'Weight' ? 'kg' : 'pcs'}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:right;">₹${Number(item.price).toFixed(2)}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700;">₹${(Number(item.qty) * Number(item.price)).toFixed(2)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:center;">${item.qty} ${getUnitShort(item.unit)}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:right;">${item.price ? `₹${Number(item.price).toFixed(2)}` : '-'}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700;">${item.price ? `₹${(Number(item.qty) * Number(item.price)).toFixed(2)}` : '-'}</td>
     </tr>
   `).join('');
 
@@ -213,7 +220,7 @@ const Vendors = () => {
 
   const addOrderItem = () => setOrderForm(p => ({
     ...p,
-    items: [...p.items, { itemName: '', qty: '', unit: 'Weight', price: '' }]
+    items: [...p.items, { itemName: '', qty: '', unit: 'Weight' }]
   }));
 
   const updateOrderItem = (idx, field, value) => {
@@ -231,12 +238,12 @@ const Vendors = () => {
   const handleSaveOrder = async (e) => {
     e.preventDefault();
     if (!orderForm.vendorId) return toast.error('Select a vendor');
-    const validItems = orderForm.items.filter(i => i.itemName.trim() && i.qty && i.price);
-    if (validItems.length === 0) return toast.error('Add at least one item with name, qty, and price');
+    const validItems = orderForm.items.filter(i => i.itemName.trim() && i.qty);
+    if (validItems.length === 0) return toast.error('Add at least one item with name and quantity');
     setSavingOrder(true);
     try {
       const vendor = vendors.find(v => v.id === orderForm.vendorId);
-      const totalAmount = validItems.reduce((s, i) => s + Number(i.qty) * Number(i.price), 0);
+      const totalAmount = validItems.reduce((s, i) => s + (Number(i.qty) * Number(i.price || 0)), 0);
       await addDoc(collection(db, 'vendor_orders'), {
         vendorId: orderForm.vendorId,
         vendorName: vendor?.name || '',
@@ -355,7 +362,7 @@ const Vendors = () => {
                       {(order.items || []).slice(0, 3).map((item, i) => (
                         <div key={i} className="v-order-item-row">
                           <span>{item.itemName}</span>
-                          <span>{item.qty} {item.unit === 'Weight' ? 'kg' : 'pcs'} × ₹{item.price}</span>
+                          <span>{item.qty} {getUnitShort(item.unit)}{item.price ? ` × ₹${item.price}` : ''}</span>
                         </div>
                       ))}
                       {(order.items || []).length > 3 && (
@@ -427,7 +434,7 @@ const Vendors = () => {
                     <div className="v-col-headers">
                       <span>Item Name</span>
                       <span>Qty</span>
-                      <span>Price/Unit</span>
+                      <span>Unit</span>
                       <span></span>
                     </div>
                     <div className="v-order-items-form">
@@ -438,11 +445,16 @@ const Vendors = () => {
                             placeholder="Item name..."
                             value={item.itemName}
                             onChange={e => updateOrderItem(idx, 'itemName', e.target.value)}
+                            required
                           />
                           <input type="number" min="0.01" step="0.01" placeholder="Qty"
-                            value={item.qty} onChange={e => updateOrderItem(idx, 'qty', e.target.value)} />
-                          <input type="number" min="0" step="0.01" placeholder="₹ Price"
-                            value={item.price} onChange={e => updateOrderItem(idx, 'price', e.target.value)} />
+                            value={item.qty} onChange={e => updateOrderItem(idx, 'qty', e.target.value)} required />
+                          <select value={item.unit || 'Weight'} onChange={e => updateOrderItem(idx, 'unit', e.target.value)}>
+                            <option value="Weight">Weight (kg)</option>
+                            <option value="Piece">Piece (pc)</option>
+                            <option value="Litre">Litre (L)</option>
+                            <option value="Packet">Packet (pkt)</option>
+                          </select>
                           <button type="button" className="v-remove-row-btn" onClick={() => removeOrderItem(idx)}>
                             <Minus size={14} />
                           </button>
@@ -454,7 +466,7 @@ const Vendors = () => {
                     </div>
                   </div>
 
-                  {orderForm.items.length > 0 && (
+                  {computeTotal() > 0 && (
                     <div className="v-order-total-box">
                       <span>Order Total</span>
                       <strong>₹{computeTotal().toFixed(2)}</strong>

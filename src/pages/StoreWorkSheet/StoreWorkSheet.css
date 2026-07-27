@@ -234,6 +234,16 @@
   color: #B48E1B;
 }
 
+.ws-unit-badge.litre {
+  background: rgba(2, 132, 199, 0.12);
+  color: #0284c7;
+}
+
+.ws-unit-badge.packet {
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
+}
+
 /* Quantity input field styled perfectly */
 .ws-qty-input-wrapper {
   position: relative;

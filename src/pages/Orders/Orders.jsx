@@ -2634,6 +2634,69 @@ const Orders = () => {
                     onChange={(e) => handleWeightCalc('weight', e.target.value, showWeightModal.price)}
                   />
                 </div>
+
+                {/* Quick Weight Select */}
+                <div style={{ margin: '8px 0 12px 0', width: '100%', textAlign: 'left' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                    Quick Select Weight
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                      {[
+                        { label: '1/4 kg', val: '0.25' },
+                        { label: '1/2 kg', val: '0.5' },
+                        { label: '3/4 kg', val: '0.75' },
+                        { label: '1 kg', val: '1' }
+                      ].map(sug => (
+                        <button
+                          key={sug.val}
+                          type="button"
+                          onClick={() => handleWeightCalc('weight', sug.val, showWeightModal.price)}
+                          style={{
+                            padding: '7px 4px',
+                            borderRadius: '8px',
+                            border: weightInput.weight === sug.val ? '1.5px solid var(--primary-color)' : '1px solid var(--border-color)',
+                            background: weightInput.weight === sug.val ? 'var(--primary-color)' : '#f8fafc',
+                            color: weightInput.weight === sug.val ? '#ffffff' : 'var(--text-primary)',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {sug.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                      {[
+                        { label: '2 kg', val: '2' },
+                        { label: '3 kg', val: '3' },
+                        { label: '4 kg', val: '4' },
+                        { label: '5 kg', val: '5' }
+                      ].map(sug => (
+                        <button
+                          key={sug.val}
+                          type="button"
+                          onClick={() => handleWeightCalc('weight', sug.val, showWeightModal.price)}
+                          style={{
+                            padding: '7px 4px',
+                            borderRadius: '8px',
+                            border: weightInput.weight === sug.val ? '1.5px solid var(--primary-color)' : '1px solid var(--border-color)',
+                            background: weightInput.weight === sug.val ? 'var(--primary-color)' : '#f8fafc',
+                            color: weightInput.weight === sug.val ? '#ffffff' : 'var(--text-primary)',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {sug.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 <div style={{ textAlign: 'center', fontWeight: '700', opacity: 0.5 }}>OR</div>
                 <div className="ord-weight-input-group">
                   <label>Amount (₹)</label>
