@@ -67,6 +67,52 @@ import Payments from '../../pages/Payments/Payments';
 import { triggerWhatsAppOrderReady, triggerWhatsAppOrderConfirmation } from '../../utils/whatsapp';
 import { sendEventNotification } from '../../utils/notificationService';
 
+// Helper unit constants & utilities
+const UNIT_OPTIONS = [
+  { value: 'KG', label: 'KG' },
+  { value: 'Tray', label: 'Tray' },
+  { value: 'Piece', label: 'Piece' },
+  { value: 'litre', label: 'litre' }
+];
+
+const normalizeUnit = (unit) => {
+  if (!unit) return 'KG';
+  const u = String(unit).trim().toLowerCase();
+  if (u === 'weight' || u === 'kg' || u === 'kgs' || u === 'kilogram') return 'KG';
+  if (u === 'tray' || u === 'trays') return 'Tray';
+  if (u === 'piece' || u === 'pieces' || u === 'pcs' || u === 'pc') return 'Piece';
+  if (u === 'litre' || u === 'liter' || u === 'ltr' || u === 'litres' || u === 'liters') return 'litre';
+  return 'KG';
+};
+
+const getUnitDisplayLabel = (unit) => {
+  const norm = normalizeUnit(unit);
+  if (norm === 'KG') return 'KG';
+  if (norm === 'Tray') return 'Tray';
+  if (norm === 'Piece') return 'Pieces';
+  if (norm === 'litre') return 'litre';
+  return norm;
+};
+
+const getUnitStep = (unit) => {
+  const norm = normalizeUnit(unit);
+  return (norm === 'KG' || norm === 'litre') ? '0.01' : '1';
+};
+
+const getUnitPlaceholder = (unit) => {
+  const norm = normalizeUnit(unit);
+  return (norm === 'KG' || norm === 'litre') ? '0.00' : '0';
+};
+
+const getUnitClass = (unit) => {
+  const norm = normalizeUnit(unit);
+  if (norm === 'KG') return 'weight';
+  if (norm === 'Tray') return 'tray';
+  if (norm === 'Piece') return 'piece';
+  if (norm === 'litre') return 'litre';
+  return 'weight';
+};
+
 
 // --- Custom Searchable Dropdown ---
 const CustomDropdown = ({ label, options, onSelect, selectedValue, placeholder, icon: Icon, onCreateClick, hasError, errorMsg }) => {
@@ -825,6 +871,7 @@ const StorePortal = () => {
     return `${year}-${month}-${day}`;
   });
   const [wsQuantities, setWsQuantities] = useState({}); // { [itemId]: quantity }
+  const [wsItemUnits, setWsItemUnits] = useState({}); // { [itemId]: 'KG' | 'Tray' | 'Piece' | 'litre' }
   const [wsHistory, setWsHistory] = useState([]);
   const [wsItems, setWsItems] = useState([]);
   const [wsLoading, setWsLoading] = useState(false);
@@ -833,6 +880,19 @@ const StorePortal = () => {
   const [wsPreviewSheet, setWsPreviewSheet] = useState(null);
   const [activeWorksheet, setActiveWorksheet] = useState(null);
   const [wsSearch, setWsSearch] = useState('');
+
+  const handleWsUnitChange = async (itemId, newUnit) => {
+    setWsItemUnits(prev => ({
+      ...prev,
+      [itemId]: newUnit
+    }));
+    setWsItems(prev => prev.map(item => item.id === itemId ? { ...item, unit: newUnit } : item));
+    try {
+      await updateDoc(doc(db, 'items', itemId), { unit: newUnit });
+    } catch (err) {
+      console.error("Error updating item unit in Firestore:", err);
+    }
+  };
 
   // Store Scan QR Box states
   const [scanInput, setScanInput] = useState('');
@@ -3548,8 +3608,9 @@ const StorePortal = () => {
                       <tbody>
                         {filteredWsItems.length > 0 ? (
                           filteredWsItems.map(item => {
-                            const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pieces';
-                            const unitPlaceholder = item.unit === 'Weight' ? '0.00' : '0';
+                            const currentUnit = wsItemUnits[item.id] || normalizeUnit(item.unit);
+                            const unitStep = getUnitStep(currentUnit);
+                            const unitPlaceholder = getUnitPlaceholder(currentUnit);
                             const itemQty = wsQuantities[item.id] ?? '';
 
                             const isAllocationCompleted = !!(activeWorksheet?.completed?.[item.id]?.[id]);
@@ -3575,9 +3636,18 @@ const StorePortal = () => {
                                   )}
                                 </td>
                                 <td>
-                                  <span className={`ws-unit-badge ${item.unit === 'Weight' ? 'weight' : 'piece'}`}>
-                                    {unitLabel}
-                                  </span>
+                                  <select
+                                    className={`ws-unit-select ${getUnitClass(currentUnit)}`}
+                                    value={currentUnit}
+                                    onChange={(e) => handleWsUnitChange(item.id, e.target.value)}
+                                    disabled={isAllocationCompleted}
+                                  >
+                                    {UNIT_OPTIONS.map(opt => (
+                                      <option key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </td>
                                 <td>
                                   <div className="ws-qty-input-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -3588,10 +3658,10 @@ const StorePortal = () => {
                                       placeholder={unitPlaceholder}
                                       onChange={(e) => handleWorksheetQtyChange(item.id, e.target.value)}
                                       min="0"
-                                      step={item.unit === 'Weight' ? '0.01' : '1'}
+                                      step={unitStep}
                                       disabled={isAllocationCompleted}
                                     />
-                                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{item.unit === 'Weight' ? 'KG' : 'Pcs'}</span>
+                                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{getUnitDisplayLabel(currentUnit)}</span>
                                   </div>
                                 </td>
                               </tr>

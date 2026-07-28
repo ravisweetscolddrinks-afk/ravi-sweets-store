@@ -30,6 +30,52 @@ import { createPortal } from 'react-dom';
 import Loader from '../../components/Loader/Loader';
 import './StoreWorkSheet.css';
 
+// Helper unit constants & utilities
+const UNIT_OPTIONS = [
+  { value: 'KG', label: 'KG' },
+  { value: 'Tray', label: 'Tray' },
+  { value: 'Piece', label: 'Piece' },
+  { value: 'litre', label: 'litre' }
+];
+
+const normalizeUnit = (unit) => {
+  if (!unit) return 'KG';
+  const u = String(unit).trim().toLowerCase();
+  if (u === 'weight' || u === 'kg' || u === 'kgs' || u === 'kilogram') return 'KG';
+  if (u === 'tray' || u === 'trays') return 'Tray';
+  if (u === 'piece' || u === 'pieces' || u === 'pcs' || u === 'pc') return 'Piece';
+  if (u === 'litre' || u === 'liter' || u === 'ltr' || u === 'litres' || u === 'liters') return 'litre';
+  return 'KG';
+};
+
+const getUnitDisplayLabel = (unit) => {
+  const norm = normalizeUnit(unit);
+  if (norm === 'KG') return 'KG';
+  if (norm === 'Tray') return 'Tray';
+  if (norm === 'Piece') return 'Pieces';
+  if (norm === 'litre') return 'litre';
+  return norm;
+};
+
+const getUnitStep = (unit) => {
+  const norm = normalizeUnit(unit);
+  return (norm === 'KG' || norm === 'litre') ? '0.01' : '1';
+};
+
+const getUnitPlaceholder = (unit) => {
+  const norm = normalizeUnit(unit);
+  return (norm === 'KG' || norm === 'litre') ? '0.00' : '0';
+};
+
+const getUnitClass = (unit) => {
+  const norm = normalizeUnit(unit);
+  if (norm === 'KG') return 'weight';
+  if (norm === 'Tray') return 'tray';
+  if (norm === 'Piece') return 'piece';
+  if (norm === 'litre') return 'litre';
+  return 'weight';
+};
+
 
 // Get Tomorrow's Date String in YYYY-MM-DD format
 const getTomorrowDateString = () => {
@@ -47,6 +93,7 @@ const StoreWorkSheet = () => {
   const [stores, setStores] = useState([]);
   const [items, setItems] = useState([]);
   const [quantities, setQuantities] = useState({}); // { [itemId]: { [storeId]: quantity } }
+  const [itemUnits, setItemUnits] = useState({}); // { [itemId]: 'KG' | 'Tray' | 'Piece' | 'litre' }
   const [history, setHistory] = useState([]);
   const [previewSheet, setPreviewSheet] = useState(null);
   const [printTargetSheet, setPrintTargetSheet] = useState(null);
@@ -101,9 +148,13 @@ const StoreWorkSheet = () => {
         if (!snap.empty) {
           const sheet = snap.docs[0].data();
           setQuantities(sheet.quantities || {});
+          if (sheet.itemUnits) {
+            setItemUnits(sheet.itemUnits);
+          }
           toast.success(`Loaded saved worksheet for ${date}`);
         } else {
           setQuantities({});
+          setItemUnits({});
         }
       } catch (err) {
         console.error("Error checking worksheet:", err);
@@ -145,6 +196,19 @@ const StoreWorkSheet = () => {
     }));
   };
 
+  const handleUnitChange = async (itemId, newUnit) => {
+    setItemUnits(prev => ({
+      ...prev,
+      [itemId]: newUnit
+    }));
+    setItems(prev => prev.map(item => item.id === itemId ? { ...item, unit: newUnit } : item));
+    try {
+      await updateDoc(doc(db, 'items', itemId), { unit: newUnit });
+    } catch (err) {
+      console.error("Error updating item unit in Firestore:", err);
+    }
+  };
+
   const handleSave = async () => {
     if (!date) {
       toast.error("Please select a date.");
@@ -170,6 +234,7 @@ const StoreWorkSheet = () => {
       const worksheetPayload = {
         date,
         quantities: cleanedQuantities,
+        itemUnits,
         updatedAt: serverTimestamp()
       };
 
@@ -218,6 +283,7 @@ const StoreWorkSheet = () => {
   const buildWorksheetESCPOSBytes = (worksheet, charsPerLine = 48, printType = 'store') => {
     const encoder = new TextEncoder();
     const wsQuantities = worksheet.quantities || {};
+    const sheetUnits = worksheet.itemUnits || itemUnits;
 
     const INIT = new Uint8Array([0x1b, 0x40]);
     const CENTER = new Uint8Array([0x1b, 0x61, 0x01]);
@@ -264,7 +330,8 @@ const StoreWorkSheet = () => {
         items.forEach(item => {
           const qty = wsQuantities[item.id]?.[store.id];
           if (qty && qty > 0) {
-            const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pcs';
+            const currentUnit = sheetUnits[item.id] || normalizeUnit(item.unit);
+            const unitLabel = getUnitDisplayLabel(currentUnit);
             storeItems.push({ name: item.name, qty, unitLabel });
           }
         });
@@ -313,9 +380,10 @@ const StoreWorkSheet = () => {
         if (activeAllocations.length > 0) {
           totalActiveItems++;
           const total = activeAllocations.reduce((sum, [_, qty]) => sum + qty, 0);
-          const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pcs';
+          const currentUnit = sheetUnits[item.id] || normalizeUnit(item.unit);
+          const unitLabel = getUnitDisplayLabel(currentUnit);
 
-          if (item.unit === 'Weight') {
+          if (currentUnit === 'KG') {
             overallSumWeight += total;
           } else {
             overallSumPieces += total;
@@ -338,7 +406,7 @@ const StoreWorkSheet = () => {
 
           // Dashed divider line and sum
           bytes.push(...encoder.encode(miniDashedLine));
-          const sumText = `SUM: ${total.toFixed(item.unit === 'Weight' ? 2 : 0)} ${unitLabel}`;
+          const sumText = `SUM: ${total.toFixed(currentUnit === 'KG' ? 2 : 0)} ${unitLabel}`;
           bytes.push(...BOLD_ON, ...RIGHT);
           bytes.push(...encoder.encode(sumText + '\n'));
           bytes.push(...BOLD_OFF, ...LEFT);
@@ -379,6 +447,7 @@ const StoreWorkSheet = () => {
     }
 
     const wsQuantities = worksheet.quantities || {};
+    const sheetUnits = worksheet.itemUnits || itemUnits;
 
     let bodyContentHtml = '';
 
@@ -390,7 +459,8 @@ const StoreWorkSheet = () => {
         items.forEach(item => {
           const qty = wsQuantities[item.id]?.[store.id];
           if (qty && qty > 0) {
-            const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pcs';
+            const currentUnit = sheetUnits[item.id] || normalizeUnit(item.unit);
+            const unitLabel = getUnitDisplayLabel(currentUnit);
             storeItems.push({ name: item.name, qty, unitLabel });
           }
         });
@@ -439,9 +509,10 @@ const StoreWorkSheet = () => {
         if (activeAllocations.length > 0) {
           totalActiveItems++;
           const total = activeAllocations.reduce((sum, [_, qty]) => sum + qty, 0);
-          const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pcs';
+          const currentUnit = sheetUnits[item.id] || normalizeUnit(item.unit);
+          const unitLabel = getUnitDisplayLabel(currentUnit);
 
-          if (item.unit === 'Weight') {
+          if (currentUnit === 'KG') {
             overallSumWeight += total;
           } else {
             overallSumPieces += total;
@@ -463,7 +534,7 @@ const StoreWorkSheet = () => {
             <div class="mini-divider-dashed"></div>
             <div class="item-row indent bold sum-row">
               <span>SUM:</span>
-              <span>${total.toFixed(item.unit === 'Weight' ? 2 : 0)} ${unitLabel}</span>
+              <span>${total.toFixed(currentUnit === 'KG' ? 2 : 0)} ${unitLabel}</span>
             </div>
             <div class="mini-divider"></div>
           `;
@@ -721,9 +792,9 @@ const StoreWorkSheet = () => {
                     <tbody>
                       {filteredItems.length > 0 ? (
                         filteredItems.map(item => {
-                          const unitBadgeClass = item.unit === 'Weight' ? 'weight' : 'piece';
-                          const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pieces';
-                          const unitPlaceholder = item.unit === 'Weight' ? '0.00' : '0';
+                          const currentUnit = itemUnits[item.id] || normalizeUnit(item.unit);
+                          const unitStep = getUnitStep(currentUnit);
+                          const unitPlaceholder = getUnitPlaceholder(currentUnit);
 
                           return (
                             <tr key={item.id}>
@@ -731,9 +802,17 @@ const StoreWorkSheet = () => {
                                 <span className="ws-item-name">{item.name}</span>
                               </td>
                               <td>
-                                <span className={`ws-unit-badge ${unitBadgeClass}`}>
-                                  {unitLabel}
-                                </span>
+                                <select
+                                  className={`ws-unit-select ${getUnitClass(currentUnit)}`}
+                                  value={currentUnit}
+                                  onChange={(e) => handleUnitChange(item.id, e.target.value)}
+                                >
+                                  {UNIT_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </select>
                               </td>
                               {stores.map(store => {
                                 const itemQty = quantities[item.id]?.[store.id] ?? '';
@@ -747,7 +826,7 @@ const StoreWorkSheet = () => {
                                         placeholder={unitPlaceholder}
                                         onChange={(e) => handleQtyChange(item.id, store.id, e.target.value)}
                                         min="0"
-                                        step={item.unit === 'Weight' ? '0.01' : '1'}
+                                        step={unitStep}
                                       />
                                     </div>
                                   </td>
@@ -876,6 +955,7 @@ const StoreWorkSheet = () => {
       <AnimatePresence>
         {previewSheet && (() => {
           const wsQuantities = previewSheet.quantities || {};
+          const sheetUnits = previewSheet.itemUnits || {};
           
           // Calculate cumulative sums
           let overallSumWeight = 0;
@@ -890,12 +970,13 @@ const StoreWorkSheet = () => {
             items.forEach(item => {
               const qty = Number(wsQuantities[item.id]?.[store.id] || 0);
               if (qty > 0) {
+                const currentUnit = sheetUnits[item.id] || itemUnits[item.id] || normalizeUnit(item.unit);
                 allocatedItems.push({
                   id: item.id,
                   name: item.name,
                   qty,
-                  unit: item.unit,
-                  unitLabel: item.unit === 'Weight' ? 'KG' : 'Pcs',
+                  unit: currentUnit,
+                  unitLabel: getUnitDisplayLabel(currentUnit),
                   isCompleted: !!(completedMap[item.id]?.[store.id])
                 });
               }
@@ -925,7 +1006,8 @@ const StoreWorkSheet = () => {
 
             if (itemTotal > 0) {
               totalActiveItems++;
-              if (item.unit === 'Weight') {
+              const currentUnit = sheetUnits[item.id] || itemUnits[item.id] || normalizeUnit(item.unit);
+              if (currentUnit === 'KG') {
                 overallSumWeight += itemTotal;
               } else {
                 overallSumPieces += itemTotal;
@@ -934,8 +1016,8 @@ const StoreWorkSheet = () => {
               consolidatedItems.push({
                 id: item.id,
                 name: item.name,
-                unit: item.unit,
-                unitLabel: item.unit === 'Weight' ? 'KG' : 'Pcs',
+                unit: currentUnit,
+                unitLabel: getUnitDisplayLabel(currentUnit),
                 total: itemTotal,
                 storeAllocations
               });
