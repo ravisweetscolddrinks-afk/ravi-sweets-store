@@ -9,7 +9,10 @@ import {
   PackageCheck,
   Building,
   X,
-  Search
+  Search,
+  Layers,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { db } from '../../config/firebase';
 import {
@@ -87,6 +90,318 @@ const getTomorrowDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
+// Component for Worksheet Stock Details & Inventory Updates
+const WorksheetStockSection = ({ sheet, items, stores, onSheetUpdated }) => {
+  const [recipes, setRecipes] = useState([]);
+  const [stockAssignments, setStockAssignments] = useState([]);
+  const [stockItems, setStockItems] = useState([]);
+  const [loadingStock, setLoadingStock] = useState(true);
+  const [updatingItems, setUpdatingItems] = useState({});
+  const [updatingAll, setUpdatingAll] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [recipeSnap, assignSnap, stockSnap] = await Promise.all([
+          getDocs(collection(db, 'recipes')),
+          getDocs(collection(db, 'stock_assignments')),
+          getDocs(collection(db, 'stock_items'))
+        ]);
+        setRecipes(recipeSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setStockItems(stockSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.error('Failed to load stock data for worksheet', err);
+      } finally {
+        setLoadingStock(false);
+      }
+    };
+    fetchData();
+  }, [sheet.id]);
+
+  const computeStockNeeds = () => {
+    const needsMap = {};
+    const wsQuantities = sheet.quantities || {};
+    const sheetUnits = sheet.itemUnits || {};
+    const sheetTrayWeights = sheet.trayWeights || {};
+
+    items.forEach(item => {
+      const storeQtyMap = wsQuantities[item.id] || {};
+      const totalQty = Object.values(storeQtyMap).reduce((sum, q) => sum + Number(q || 0), 0);
+      if (totalQty <= 0) return;
+
+      const currentUnit = sheetUnits[item.id] || normalizeUnit(item.unit);
+      const kgsPerTray = Number(sheetTrayWeights[item.id] || 0);
+
+      // Determine effective quantity for recipe ingredient calculation
+      let effectiveQty = totalQty;
+      if (currentUnit === 'Tray' && kgsPerTray > 0) {
+        effectiveQty = totalQty * kgsPerTray;
+      }
+
+      // Find recipe matching by itemId or itemName
+      const recipe = recipes.find(r =>
+        (r.itemId && r.itemId === item.id) ||
+        (!r.itemId && r.name.toLowerCase().trim() === (item.name || '').toLowerCase().trim())
+      );
+      if (!recipe || !recipe.ingredients) return;
+
+      recipe.ingredients.forEach(ing => {
+        if (!ing.stockItemId) return;
+        const requiredQty = Number(ing.qty) * effectiveQty;
+
+        if (!needsMap[ing.stockItemId]) {
+          const assignments = stockAssignments.filter(a => a.stockItemId === ing.stockItemId);
+          const totalCurrentQty = assignments.reduce((sum, a) => sum + (a.currentQty || 0), 0);
+
+          needsMap[ing.stockItemId] = {
+            stockItemId: ing.stockItemId,
+            stockItemName: ing.stockItemName || stockItems.find(si => si.id === ing.stockItemId)?.name || 'Unknown',
+            unit: ing.unit || 'Weight',
+            totalQtyNeeded: 0,
+            currentQty: totalCurrentQty,
+            assignments: assignments,
+            updated: sheet.stockUpdated?.[ing.stockItemId] || false
+          };
+        }
+        needsMap[ing.stockItemId].totalQtyNeeded += requiredQty;
+      });
+    });
+
+    return Object.values(needsMap);
+  };
+
+  const handleUpdateSingleStock = async (stockNeed) => {
+    if (stockNeed.updated) {
+      toast.error('Stock already updated for this item');
+      return;
+    }
+    setUpdatingItems(prev => ({ ...prev, [stockNeed.stockItemId]: true }));
+    try {
+      let remainingToDeduct = stockNeed.totalQtyNeeded;
+      for (const assignment of stockNeed.assignments) {
+        if (remainingToDeduct <= 0) break;
+        const deductFromThis = Math.min(assignment.currentQty || 0, remainingToDeduct);
+        const newQty = Math.max(0, (assignment.currentQty || 0) - deductFromThis);
+        await updateDoc(doc(db, 'stock_assignments', assignment.id), {
+          currentQty: newQty,
+          updatedAt: serverTimestamp()
+        });
+        remainingToDeduct -= deductFromThis;
+      }
+
+      const updatedStockUpdated = {
+        ...(sheet.stockUpdated || {}),
+        [stockNeed.stockItemId]: true
+      };
+
+      if (sheet.id) {
+        await updateDoc(doc(db, 'store_worksheets', sheet.id), {
+          [`stockUpdated.${stockNeed.stockItemId}`]: true,
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      const assignSnap = await getDocs(collection(db, 'stock_assignments'));
+      setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      
+      onSheetUpdated({
+        ...sheet,
+        stockUpdated: updatedStockUpdated
+      });
+
+      toast.success(`Stock updated for ${stockNeed.stockItemName}`);
+    } catch (err) {
+      console.error('Stock update error:', err);
+      toast.error(`Failed to update stock for ${stockNeed.stockItemName}`);
+    } finally {
+      setUpdatingItems(prev => ({ ...prev, [stockNeed.stockItemId]: false }));
+    }
+  };
+
+  const handleUpdateAllStock = async () => {
+    const needs = computeStockNeeds();
+    const pendingNeeds = needs.filter(n => !n.updated);
+    if (pendingNeeds.length === 0) {
+      toast.error('All stock items already updated for this worksheet');
+      return;
+    }
+    setUpdatingAll(true);
+    try {
+      const updatesMap = {};
+      const newStockUpdated = { ...(sheet.stockUpdated || {}) };
+
+      for (const stockNeed of pendingNeeds) {
+        let remainingToDeduct = stockNeed.totalQtyNeeded;
+        for (const assignment of stockNeed.assignments) {
+          if (remainingToDeduct <= 0) break;
+          const deductFromThis = Math.min(assignment.currentQty || 0, remainingToDeduct);
+          const newQty = Math.max(0, (assignment.currentQty || 0) - deductFromThis);
+          await updateDoc(doc(db, 'stock_assignments', assignment.id), {
+            currentQty: newQty,
+            updatedAt: serverTimestamp()
+          });
+          remainingToDeduct -= deductFromThis;
+        }
+        updatesMap[`stockUpdated.${stockNeed.stockItemId}`] = true;
+        newStockUpdated[stockNeed.stockItemId] = true;
+      }
+
+      if (sheet.id) {
+        await updateDoc(doc(db, 'store_worksheets', sheet.id), {
+          ...updatesMap,
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      const assignSnap = await getDocs(collection(db, 'stock_assignments'));
+      setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      onSheetUpdated({
+        ...sheet,
+        stockUpdated: newStockUpdated
+      });
+
+      toast.success('All stock items updated successfully!');
+    } catch (err) {
+      console.error('Update all stock error:', err);
+      toast.error('Failed to update all stock');
+    } finally {
+      setUpdatingAll(false);
+    }
+  };
+
+  if (loadingStock) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <Loader type="section" message="Loading recipe stock calculations..." />
+      </div>
+    );
+  }
+
+  const stockNeeds = computeStockNeeds();
+  const allUpdated = stockNeeds.length > 0 && stockNeeds.every(n => n.updated);
+
+  return (
+    <div style={{ padding: '10px 0' }}>
+      {stockNeeds.length === 0 ? (
+        <div style={{ padding: '40px 20px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+          <Layers size={36} style={{ margin: '0 auto 12px', opacity: 0.4, color: 'var(--primary-color)' }} />
+          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-secondary)' }}>
+            No recipe ingredients mapped for the items in this worksheet.
+          </div>
+          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>
+            Go to Stock Analysis → Recipes to link recipes with ingredients to enable stock tracking.
+          </div>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+            <h4 style={{ fontSize: '14px', color: 'var(--primary-color)', margin: 0, fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Layers size={16} />
+              Raw Materials Required for Worksheet ({sheet.date})
+            </h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '700', background: '#f1f5f9', padding: '4px 10px', borderRadius: '6px' }}>
+                {stockNeeds.filter(n => n.updated).length} of {stockNeeds.length} updated
+              </span>
+              <button
+                onClick={handleUpdateAllStock}
+                disabled={updatingAll || allUpdated}
+                style={{
+                  padding: '7px 16px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: allUpdated ? '#d1fae5' : 'var(--primary-color)',
+                  color: allUpdated ? '#059669' : '#fff',
+                  cursor: allUpdated ? 'default' : 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  boxShadow: allUpdated ? 'none' : '0 2px 6px rgba(52,139,221,0.3)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {updatingAll ? <div className="loader" style={{ width: '12px', height: '12px', borderTopColor: '#fff' }}></div> : <CheckCircle2 size={14} />}
+                {allUpdated ? 'All Stock Updated' : 'Update All Stock'}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+            <table className="ws-table" style={{ margin: 0 }}>
+              <thead>
+                <tr>
+                  <th>Stock Raw Material</th>
+                  <th>Total Required Qty</th>
+                  <th>Available in Stock</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'center' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stockNeeds.map(need => (
+                  <tr key={need.stockItemId} style={{ background: need.updated ? '#f0fdf4' : '#ffffff' }}>
+                    <td style={{ fontWeight: '700', fontSize: '13px' }}>
+                      {need.updated && <CheckCircle2 size={14} style={{ marginRight: '6px', verticalAlign: 'middle', color: '#10b981' }} />}
+                      {need.stockItemName}
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: '800', color: 'var(--primary-color)', fontSize: '13px' }}>
+                        {need.totalQtyNeeded.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: '800', fontSize: '13px', color: need.currentQty < need.totalQtyNeeded ? '#dc2626' : '#059669' }}>
+                        {need.currentQty.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}
+                      </span>
+                      {need.currentQty < need.totalQtyNeeded && (
+                        <span style={{ fontSize: '10px', color: '#dc2626', marginLeft: '6px', fontWeight: '700', background: '#fef2f2', padding: '2px 6px', borderRadius: '4px' }}>
+                          <AlertCircle size={10} style={{ verticalAlign: 'middle', marginRight: '2px' }} />Low Stock
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {need.updated ? (
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: '#059669', background: '#d1fae5', padding: '3px 8px', borderRadius: '6px' }}>✓ Updated</span>
+                      ) : (
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: '#92400e', background: '#fef3c7', padding: '3px 8px', borderRadius: '6px' }}>Pending</span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      {!need.updated && (
+                        <button
+                          onClick={() => handleUpdateSingleStock(need)}
+                          disabled={updatingItems[need.stockItemId]}
+                          style={{
+                            padding: '6px 14px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            borderRadius: '7px',
+                            border: '1.5px solid var(--primary-color)',
+                            background: '#fff',
+                            color: 'var(--primary-color)',
+                            cursor: 'pointer',
+                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {updatingItems[need.stockItemId] ? <div className="loader" style={{ width: '10px', height: '10px', borderTopColor: 'var(--primary-color)' }}></div> : null}
+                          Update Stock
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 const StoreWorkSheet = () => {
   const [activeTab, setActiveTab] = useState('active'); // 'active' or 'history'
   const [date, setDate] = useState(getTomorrowDateString());
@@ -94,6 +409,8 @@ const StoreWorkSheet = () => {
   const [items, setItems] = useState([]);
   const [quantities, setQuantities] = useState({}); // { [itemId]: { [storeId]: quantity } }
   const [itemUnits, setItemUnits] = useState({}); // { [itemId]: 'KG' | 'Tray' | 'Piece' | 'litre' }
+  const [trayWeights, setTrayWeights] = useState({}); // { [itemId]: kgsPerTray }
+  const [modalTab, setModalTab] = useState('overview'); // 'overview' or 'stock'
   const [history, setHistory] = useState([]);
   const [previewSheet, setPreviewSheet] = useState(null);
   const [printTargetSheet, setPrintTargetSheet] = useState(null);
@@ -151,10 +468,14 @@ const StoreWorkSheet = () => {
           if (sheet.itemUnits) {
             setItemUnits(sheet.itemUnits);
           }
+          if (sheet.trayWeights) {
+            setTrayWeights(sheet.trayWeights);
+          }
           toast.success(`Loaded saved worksheet for ${date}`);
         } else {
           setQuantities({});
           setItemUnits({});
+          setTrayWeights({});
         }
       } catch (err) {
         console.error("Error checking worksheet:", err);
@@ -193,6 +514,14 @@ const StoreWorkSheet = () => {
         ...(prev[itemId] || {}),
         [storeId]: val
       }
+    }));
+  };
+
+  const handleTrayWeightChange = (itemId, value) => {
+    const val = value === '' ? '' : parseFloat(value);
+    setTrayWeights(prev => ({
+      ...prev,
+      [itemId]: val
     }));
   };
 
@@ -235,6 +564,7 @@ const StoreWorkSheet = () => {
         date,
         quantities: cleanedQuantities,
         itemUnits,
+        trayWeights,
         updatedAt: serverTimestamp()
       };
 
@@ -813,6 +1143,29 @@ const StoreWorkSheet = () => {
                                     </option>
                                   ))}
                                 </select>
+                                {currentUnit === 'Tray' && (
+                                  <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '700' }}>KG/Tray:</span>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      min="0"
+                                      placeholder="e.g. 5"
+                                      value={trayWeights[item.id] ?? ''}
+                                      onChange={(e) => handleTrayWeightChange(item.id, e.target.value)}
+                                      style={{
+                                        width: '60px',
+                                        height: '24px',
+                                        padding: '2px 6px',
+                                        fontSize: '11px',
+                                        borderRadius: '6px',
+                                        border: '1.5px solid var(--primary-color)',
+                                        fontWeight: '700',
+                                        background: '#f0f9ff'
+                                      }}
+                                    />
+                                  </div>
+                                )}
                               </td>
                               {stores.map(store => {
                                 const itemQty = quantities[item.id]?.[store.id] ?? '';
@@ -1042,13 +1395,66 @@ const StoreWorkSheet = () => {
                       <p>Worksheet for {previewSheet.date}</p>
                     </div>
                   </div>
-                  <button className="ws-modal-close-btn" onClick={() => setPreviewSheet(null)}>
-                    <X size={20} />
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '8px', gap: '2px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setModalTab('overview')}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          border: 'none',
+                          borderRadius: '6px',
+                          background: modalTab === 'overview' ? '#ffffff' : 'transparent',
+                          color: modalTab === 'overview' ? 'var(--primary-color)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          boxShadow: modalTab === 'overview' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        📊 Overview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModalTab('stock')}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          border: 'none',
+                          borderRadius: '6px',
+                          background: modalTab === 'stock' ? '#ffffff' : 'transparent',
+                          color: modalTab === 'stock' ? 'var(--primary-color)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          boxShadow: modalTab === 'stock' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <Layers size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                        Stock Details
+                      </button>
+                    </div>
+                    <button className="ws-modal-close-btn" onClick={() => setPreviewSheet(null)}>
+                      <X size={20} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Modal Body */}
                 <div className="ws-modal-body">
+                  {modalTab === 'stock' ? (
+                    <WorksheetStockSection
+                      sheet={previewSheet}
+                      items={items}
+                      stores={stores}
+                      onSheetUpdated={(updatedSheet) => {
+                        setPreviewSheet(updatedSheet);
+                        setHistory(prev => prev.map(h => h.id === updatedSheet.id ? updatedSheet : h));
+                      }}
+                    />
+                  ) : (
+                    <>
                   {/* Quick Metrics row */}
                   <div className="ws-metrics-grid">
                     <div className="ws-metric-card">
@@ -1165,6 +1571,8 @@ const StoreWorkSheet = () => {
                       )}
                     </div>
                   </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Modal Footer */}
