@@ -33,6 +33,7 @@ import StoreWorkSheet from './pages/StoreWorkSheet/StoreWorkSheet';
 import ScanBox from './pages/ScanBox/ScanBox';
 import Dashboard from './pages/Dashboard/Dashboard';
 import StockAnalysis from './pages/StockAnalysis/StockAnalysis';
+import StockEntry from './pages/StockEntry/StockEntry';
 import Vendors from './pages/Vendors/Vendors';
 import { Toaster } from 'react-hot-toast';
 import { NotificationProvider } from './context/NotificationContext';
@@ -115,6 +116,7 @@ function App() {
           <Route path="/employees/:id" element={<ProtectedRoute><Layout><EmployeeDetails /></Layout></ProtectedRoute>} />
           <Route path="/timesheet" element={<ProtectedRoute><TimeSheet /></ProtectedRoute>} />
           <Route path="/stock" element={<ProtectedRoute><Layout><StockAnalysis /></Layout></ProtectedRoute>} />
+          <Route path="/stock-entry" element={<ProtectedRoute><Layout><StockEntry /></Layout></ProtectedRoute>} />
           <Route path="/vendors" element={<ProtectedRoute><Layout><Vendors /></Layout></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><PlaceholderPage title="Reports" /></ProtectedRoute>} />
           <Route path="/support" element={<ProtectedRoute><Layout><Support /></Layout></ProtectedRoute>} />

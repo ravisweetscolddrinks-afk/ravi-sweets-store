@@ -19,7 +19,8 @@ import {
   LifeBuoy,
   X,
   BarChart2,
-  Truck
+  Truck,
+  PackageCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './Sidebar.css';
@@ -30,6 +31,7 @@ export const menuItems = [
   { id: 'orders', label: 'Orders', icon: <ShoppingBag />, path: '/orders' },
   { id: 'store-worksheet', label: 'Store Work Sheet', icon: <ClipboardList />, path: '/store-worksheet' },
   { id: 'stock', label: 'Stock Analysis', icon: <BarChart2 />, path: '/stock' },
+  { id: 'stock-entry', label: 'Stock Entry', icon: <PackageCheck />, path: '/stock-entry' },
   { id: 'vendors', label: 'Vendors', icon: <Truck />, path: '/vendors' },
   { id: 'items', label: 'Items', icon: <Box />, path: '/items' },
   { id: 'categories', label: 'Categories', icon: <Tag />, path: '/categories' },
