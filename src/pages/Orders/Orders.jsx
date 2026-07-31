@@ -23,7 +23,10 @@ import {
   ChevronUp,
   Bluetooth,
   Usb,
-  RefreshCw
+  RefreshCw,
+  Layers,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { buildOrderESCPOS } from '../../utils/qzTray';
 import { usePrinter } from '../../context/PrinterContext';
@@ -171,6 +174,352 @@ const CustomDropdown = ({ label, options, onSelect, selectedValue, placeholder, 
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+};
+
+// --- Accordion Stock Section Component ---
+const AccordionStockSection = ({ order, isMobile = false }) => {
+  const [recipes, setRecipes] = useState([]);
+  const [stockAssignments, setStockAssignments] = useState([]);
+  const [stockItems, setStockItems] = useState([]);
+  const [loadingStock, setLoadingStock] = useState(true);
+  const [updatingItems, setUpdatingItems] = useState({}); // { stockItemId: true }
+  const [updatingAll, setUpdatingAll] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [recipeSnap, assignSnap, stockSnap] = await Promise.all([
+          getDocs(collection(db, 'recipes')),
+          getDocs(collection(db, 'stock_assignments')),
+          getDocs(collection(db, 'stock_items'))
+        ]);
+        setRecipes(recipeSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setStockItems(stockSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.error('Failed to load stock data', err);
+      } finally {
+        setLoadingStock(false);
+      }
+    };
+    fetchData();
+  }, [order.id]);
+
+  // Build a map: for each order item, find its recipe, compute required stock
+  const computeStockNeeds = () => {
+    const needsMap = {}; // { stockItemId: { stockItemId, stockItemName, unit, totalQtyNeeded, currentQty, assignmentId } }
+    order.items.forEach(orderItem => {
+      // Match recipe by itemId (preferred) or fall back to name match for legacy recipes
+      const recipe = recipes.find(r =>
+        (r.itemId && r.itemId === orderItem.id) ||
+        (!r.itemId && r.name.toLowerCase().trim() === (orderItem.name || '').toLowerCase().trim())
+      );
+      if (!recipe || !recipe.ingredients) return;
+
+      recipe.ingredients.forEach(ing => {
+        if (!ing.stockItemId) return;
+        // Calculate required qty: ingredient qty * order item quantity (for weight items), or just ingredient qty for pieces
+        const multiplier = orderItem.unit === 'Weight' ? Number(orderItem.quantity) : Number(orderItem.quantity);
+        const requiredQty = Number(ing.qty) * multiplier;
+
+        if (!needsMap[ing.stockItemId]) {
+          // Find assignment (use first mUnit's assignment if multiple, or aggregate)
+          const assignments = stockAssignments.filter(a => a.stockItemId === ing.stockItemId);
+          const totalCurrentQty = assignments.reduce((sum, a) => sum + (a.currentQty || 0), 0);
+          const primaryAssignment = assignments[0];
+
+          needsMap[ing.stockItemId] = {
+            stockItemId: ing.stockItemId,
+            stockItemName: ing.stockItemName || stockItems.find(si => si.id === ing.stockItemId)?.name || 'Unknown',
+            unit: ing.unit || 'Weight',
+            totalQtyNeeded: 0,
+            currentQty: totalCurrentQty,
+            assignments: assignments,
+            primaryAssignment: primaryAssignment,
+            updated: order.stockUpdated?.[ing.stockItemId] || false
+          };
+        }
+        needsMap[ing.stockItemId].totalQtyNeeded += requiredQty;
+      });
+    });
+    return Object.values(needsMap);
+  };
+
+  const handleUpdateSingleStock = async (stockNeed) => {
+    if (stockNeed.updated) {
+      toast.error('Stock already updated for this item');
+      return;
+    }
+    setUpdatingItems(prev => ({ ...prev, [stockNeed.stockItemId]: true }));
+    try {
+      // Deduct from all assignments for this stock item proportionally
+      let remainingToDeduct = stockNeed.totalQtyNeeded;
+      for (const assignment of stockNeed.assignments) {
+        if (remainingToDeduct <= 0) break;
+        const deductFromThis = Math.min(assignment.currentQty || 0, remainingToDeduct);
+        const newQty = Math.max(0, (assignment.currentQty || 0) - deductFromThis);
+        await updateDoc(doc(db, 'stock_assignments', assignment.id), {
+          currentQty: newQty,
+          updatedAt: serverTimestamp()
+        });
+        remainingToDeduct -= deductFromThis;
+      }
+      // Mark this stock item as updated on the order
+      const orderRef = doc(db, 'orders', order.id);
+      await updateDoc(orderRef, {
+        [`stockUpdated.${stockNeed.stockItemId}`]: true,
+        updatedAt: serverTimestamp()
+      });
+      // Refresh stock assignments
+      const assignSnap = await getDocs(collection(db, 'stock_assignments'));
+      setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      toast.success(`Stock updated for ${stockNeed.stockItemName}`);
+    } catch (err) {
+      console.error('Stock update error:', err);
+      toast.error(`Failed to update stock for ${stockNeed.stockItemName}`);
+    } finally {
+      setUpdatingItems(prev => ({ ...prev, [stockNeed.stockItemId]: false }));
+    }
+  };
+
+  const handleUpdateAllStock = async () => {
+    const needs = computeStockNeeds();
+    const pendingNeeds = needs.filter(n => !n.updated);
+    if (pendingNeeds.length === 0) {
+      toast.error('All stock items already updated for this order');
+      return;
+    }
+    setUpdatingAll(true);
+    try {
+      const orderRef = doc(db, 'orders', order.id);
+      const updatesMap = {};
+      for (const stockNeed of pendingNeeds) {
+        let remainingToDeduct = stockNeed.totalQtyNeeded;
+        for (const assignment of stockNeed.assignments) {
+          if (remainingToDeduct <= 0) break;
+          const deductFromThis = Math.min(assignment.currentQty || 0, remainingToDeduct);
+          const newQty = Math.max(0, (assignment.currentQty || 0) - deductFromThis);
+          await updateDoc(doc(db, 'stock_assignments', assignment.id), {
+            currentQty: newQty,
+            updatedAt: serverTimestamp()
+          });
+          remainingToDeduct -= deductFromThis;
+        }
+        updatesMap[`stockUpdated.${stockNeed.stockItemId}`] = true;
+      }
+      await updateDoc(orderRef, { ...updatesMap, updatedAt: serverTimestamp() });
+      const assignSnap = await getDocs(collection(db, 'stock_assignments'));
+      setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      toast.success('All stock items updated successfully!');
+    } catch (err) {
+      console.error('Update all stock error:', err);
+      toast.error('Failed to update all stock');
+    } finally {
+      setUpdatingAll(false);
+    }
+  };
+
+  if (loadingStock) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}><div className="loader" style={{ borderBottomColor: 'var(--primary-color)', margin: '0 auto' }}></div></div>;
+  }
+
+  const stockNeeds = computeStockNeeds();
+  const allUpdated = stockNeeds.length > 0 && stockNeeds.every(n => n.updated);
+
+  if (isMobile) {
+    return (
+      <div className="ord-tab-panel animate-fade-in" style={{ fontSize: '12px' }}>
+        {stockNeeds.length === 0 ? (
+          <div className="ord-timeline-empty" style={{ padding: '20px', textAlign: 'center' }}>
+            <Layers size={28} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
+            <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>No recipes found for items in this order.</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Add recipes in Stock Analysis to enable stock tracking.</div>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>
+                {stockNeeds.filter(n => n.updated).length}/{stockNeeds.length} updated
+              </span>
+              <button
+                onClick={handleUpdateAllStock}
+                disabled={updatingAll || allUpdated}
+                style={{
+                  padding: '5px 10px',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: allUpdated ? '#d1fae5' : 'var(--primary-color)',
+                  color: allUpdated ? '#059669' : '#fff',
+                  cursor: allUpdated ? 'default' : 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '4px'
+                }}
+              >
+                {updatingAll ? <div className="loader" style={{ width: '10px', height: '10px', borderTopColor: '#fff' }}></div> : <CheckCircle2 size={12} />}
+                {allUpdated ? 'All Updated' : 'Update All'}
+              </button>
+            </div>
+            {stockNeeds.map(need => (
+              <div key={need.stockItemId} style={{
+                background: need.updated ? '#f0fdf4' : '#f8fafc',
+                border: '1px solid ' + (need.updated ? '#10b981' : 'var(--border-color)'),
+                borderRadius: '8px',
+                padding: '10px',
+                marginBottom: '8px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '800', fontSize: '12px', color: need.updated ? '#059669' : 'var(--text-primary)' }}>
+                      {need.updated && <CheckCircle2 size={11} style={{ marginRight: '4px', verticalAlign: 'middle', color: '#10b981' }} />}
+                      {need.stockItemName}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      Required: <strong>{need.totalQtyNeeded.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}</strong>
+                      &nbsp;|&nbsp;Available: <strong style={{ color: need.currentQty < need.totalQtyNeeded ? '#dc2626' : '#059669' }}>{need.currentQty.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}</strong>
+                    </div>
+                  </div>
+                  {!need.updated && (
+                    <button
+                      onClick={() => handleUpdateSingleStock(need)}
+                      disabled={updatingItems[need.stockItemId]}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        borderRadius: '6px',
+                        border: '1.5px solid var(--primary-color)',
+                        background: '#fff',
+                        color: 'var(--primary-color)',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        display: 'flex', alignItems: 'center', gap: '3px'
+                      }}
+                    >
+                      {updatingItems[need.stockItemId] ? <div className="loader" style={{ width: '8px', height: '8px', borderTopColor: 'var(--primary-color)' }}></div> : null}
+                      Update
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop
+  return (
+    <div className="ord-tab-panel animate-fade-in" style={{ padding: '10px 0' }}>
+      {stockNeeds.length === 0 ? (
+        <div className="ord-timeline-empty" style={{ padding: '30px', textAlign: 'center' }}>
+          <Layers size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-secondary)' }}>No recipes found for items in this order.</div>
+          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>Go to Stock Analysis → Recipes to add recipes for your items.</div>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h4 style={{ fontSize: '13px', color: 'var(--primary-color)', margin: 0 }}>
+              <Layers size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+              Stock Required for This Order
+            </h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                {stockNeeds.filter(n => n.updated).length} of {stockNeeds.length} updated
+              </span>
+              <button
+                onClick={handleUpdateAllStock}
+                disabled={updatingAll || allUpdated}
+                style={{
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: allUpdated ? '#d1fae5' : 'var(--primary-color)',
+                  color: allUpdated ? '#059669' : '#fff',
+                  cursor: allUpdated ? 'default' : 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {updatingAll ? <div className="loader" style={{ width: '12px', height: '12px', borderTopColor: '#fff' }}></div> : <CheckCircle2 size={13} />}
+                {allUpdated ? 'All Stock Updated' : 'Update All Stock'}
+              </button>
+            </div>
+          </div>
+          <table className="ord-items-subtable">
+            <thead>
+              <tr>
+                <th>Stock Item</th>
+                <th>Required Qty</th>
+                <th>Available Qty</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'center' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stockNeeds.map(need => (
+                <tr key={need.stockItemId} style={{ background: need.updated ? '#f0fdf410' : 'transparent' }}>
+                  <td style={{ fontWeight: '700' }}>
+                    {need.updated && <CheckCircle2 size={12} style={{ marginRight: '5px', verticalAlign: 'middle', color: '#10b981' }} />}
+                    {need.stockItemName}
+                  </td>
+                  <td>
+                    <span style={{ fontWeight: '700', color: 'var(--primary-color)' }}>
+                      {need.totalQtyNeeded.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{ fontWeight: '700', color: need.currentQty < need.totalQtyNeeded ? '#dc2626' : '#059669' }}>
+                      {need.currentQty.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}
+                    </span>
+                    {need.currentQty < need.totalQtyNeeded && (
+                      <span style={{ fontSize: '10px', color: '#dc2626', marginLeft: '6px', fontWeight: '700' }}>
+                        <AlertCircle size={10} style={{ verticalAlign: 'middle', marginRight: '2px' }} />Low
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    {need.updated ? (
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#059669', background: '#d1fae5', padding: '3px 8px', borderRadius: '5px' }}>✓ Updated</span>
+                    ) : (
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#92400e', background: '#fef3c7', padding: '3px 8px', borderRadius: '5px' }}>Pending</span>
+                    )}
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    {!need.updated && (
+                      <button
+                        onClick={() => handleUpdateSingleStock(need)}
+                        disabled={updatingItems[need.stockItemId]}
+                        style={{
+                          padding: '5px 12px',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          borderRadius: '7px',
+                          border: '1.5px solid var(--primary-color)',
+                          background: '#fff',
+                          color: 'var(--primary-color)',
+                          cursor: 'pointer',
+                          display: 'inline-flex', alignItems: 'center', gap: '4px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {updatingItems[need.stockItemId] ? <div className="loader" style={{ width: '10px', height: '10px', borderTopColor: 'var(--primary-color)' }}></div> : null}
+                        Update Stock
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </div>
   );
 };
@@ -1810,6 +2159,15 @@ const Orders = () => {
                             >
                               Payment History
                             </button>
+                            <button
+                              type="button"
+                              className={`ord-preview-tab-btn ${getAccordionTab(order.id) === 'stock' ? 'active' : ''}`}
+                              onClick={() => setAccordionTab(order.id, 'stock')}
+                              style={{ fontSize: '13px', padding: '8px 12px' }}
+                            >
+                              <Layers size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                              Stock Details
+                            </button>
                           </div>
 
                           {/* Tab Panel: Items Included */}
@@ -1934,6 +2292,11 @@ const Orders = () => {
                           {/* Tab Panel: Payment Timeline */}
                           {getAccordionTab(order.id) === 'payment' && (
                             <AccordionPaymentSection order={order} />
+                          )}
+
+                          {/* Tab Panel: Stock Details */}
+                          {getAccordionTab(order.id) === 'stock' && (
+                            <AccordionStockSection order={order} />
                           )}
                         </div>
                       </td>
@@ -2080,6 +2443,15 @@ const Orders = () => {
                       >
                         Payment
                       </button>
+                      <button
+                        type="button"
+                        className={`ord-preview-tab-btn ${getAccordionTab(order.id) === 'stock' ? 'active' : ''}`}
+                        onClick={() => setAccordionTab(order.id, 'stock')}
+                        style={{ fontSize: '12px', padding: '6px 10px', flexShrink: 0 }}
+                      >
+                        <Layers size={11} style={{ verticalAlign: 'middle', marginRight: '3px' }} />
+                        Stock
+                      </button>
                     </div>
 
                     {/* Tab Panel: Items Included */}
@@ -2211,6 +2583,11 @@ const Orders = () => {
                     {/* Tab Panel: Payment Timeline */}
                     {getAccordionTab(order.id) === 'payment' && (
                       <AccordionPaymentSection order={order} isMobile={true} />
+                    )}
+
+                    {/* Tab Panel: Stock Details */}
+                    {getAccordionTab(order.id) === 'stock' && (
+                      <AccordionStockSection order={order} isMobile={true} />
                     )}
                   </div>
                 )}

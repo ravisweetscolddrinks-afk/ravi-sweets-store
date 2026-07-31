@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Plus, Search, Package, Edit, Trash2, X,
-  Factory, BarChart2, BookOpen, ChevronDown,
+  Factory, BarChart2, ChevronDown,
   AlertTriangle, CheckCircle2, AlertCircle,
   Scale, Hash, Layers, ArrowUpCircle, Save,
   Box, FlaskConical, Minus
@@ -30,6 +30,85 @@ const HealthIcon = ({ level }) => {
 
 const HealthLabel = { critical: 'Critical', low: 'Low Stock', good: 'Good' };
 
+/* ── Custom Searchable Dropdown ───────────────────────── */
+const SASearchDropdown = ({ label, options, value, onChange, placeholder, required, getLabel, getValue, renderOption }) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = options.filter(o =>
+    (getLabel(o) || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectedOption = options.find(o => getValue(o) === value);
+
+  return (
+    <div className="sa-custom-dropdown" ref={ref}>
+      {label && <label className="sa-custom-dropdown-label">{label}{required && ' *'}</label>}
+      <div
+        className={`sa-custom-dropdown-trigger ${open ? 'open' : ''}`}
+        onClick={() => { setOpen(!open); setSearch(''); }}
+      >
+        <span className={selectedOption ? 'sa-dd-selected' : 'sa-dd-placeholder'}>
+          {selectedOption ? getLabel(selectedOption) : placeholder || 'Select...'}
+        </span>
+        <ChevronDown size={15} className={`sa-dd-chevron ${open ? 'rotated' : ''}`} />
+      </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="sa-custom-dropdown-popover"
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+          >
+            <div className="sa-dd-search-wrap">
+              <Search size={13} className="sa-dd-search-icon" />
+              <input
+                className="sa-dd-search-input"
+                placeholder="Search..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                autoFocus
+                onClick={e => e.stopPropagation()}
+              />
+            </div>
+            <div className="sa-dd-list">
+              {filtered.length === 0 ? (
+                <div className="sa-dd-empty">No results found</div>
+              ) : (
+                filtered.map(opt => (
+                  <div
+                    key={getValue(opt)}
+                    className={`sa-dd-item ${getValue(opt) === value ? 'active' : ''}`}
+                    onClick={() => {
+                      onChange(opt);
+                      setOpen(false);
+                      setSearch('');
+                    }}
+                  >
+                    {renderOption ? renderOption(opt) : getLabel(opt)}
+                    {getValue(opt) === value && <CheckCircle2 size={12} className="sa-dd-check" />}
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 /* ── Main Component ────────────────────────────────────── */
 const StockAnalysis = () => {
   const [activeTab, setActiveTab] = useState('analysis');
@@ -39,6 +118,7 @@ const StockAnalysis = () => {
   const [stockItems, setStockItems] = useState([]);
   const [stockAssignments, setStockAssignments] = useState([]);
   const [recipes, setRecipes] = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Stock Items form
@@ -46,6 +126,9 @@ const StockAnalysis = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [stockForm, setStockForm] = useState({ name: '', unit: 'Weight', bufferQty: '' });
   const [savingItem, setSavingItem] = useState(false);
+
+  // Stock Items tab search
+  const [stockItemSearch, setStockItemSearch] = useState('');
 
   // Assign modal
   const [assignTarget, setAssignTarget] = useState(null);
@@ -55,8 +138,11 @@ const StockAnalysis = () => {
   // Recipe form
   const [showRecipeForm, setShowRecipeForm] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
-  const [recipeForm, setRecipeForm] = useState({ name: '', mUnitId: '', ingredients: [] });
+  const [recipeForm, setRecipeForm] = useState({ name: '', mUnitId: '', itemId: '', itemName: '', ingredients: [] });
   const [savingRecipe, setSavingRecipe] = useState(false);
+
+  // Recipes tab search
+  const [recipeSearch, setRecipeSearch] = useState('');
 
   // Analysis filters
   const [selectedMUnit, setSelectedMUnit] = useState('all');
@@ -64,7 +150,7 @@ const StockAnalysis = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Delete modals
-  const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'item'|'recipe', id }
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   /* ── Firestore listeners ─────────────────────────────── */
@@ -89,6 +175,18 @@ const StockAnalysis = () => {
   useEffect(() => {
     const q = query(collection(db, 'recipes'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, snap => setRecipes(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const snap = await getDocs(query(collection(db, 'items'), orderBy('name', 'asc')));
+        setItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (err) {
+        console.error('Failed to load items', err);
+      }
+    };
+    fetchItems();
   }, []);
 
   /* ── Stock Items CRUD ─────────────────────────────────── */
@@ -179,15 +277,19 @@ const StockAnalysis = () => {
     e.preventDefault();
     if (!recipeForm.name.trim()) return toast.error('Recipe name required');
     if (!recipeForm.mUnitId) return toast.error('Select a manufacturing unit');
+    if (!recipeForm.itemId) return toast.error('Select an item to assign this recipe to');
     const validIngredients = recipeForm.ingredients.filter(i => i.stockItemId && i.qty);
     if (validIngredients.length === 0) return toast.error('Add at least one ingredient');
     setSavingRecipe(true);
     try {
       const mUnit = mUnits.find(m => m.id === recipeForm.mUnitId);
+      const linkedItem = items.find(i => i.id === recipeForm.itemId);
       const data = {
         name: recipeForm.name.trim(),
         mUnitId: recipeForm.mUnitId,
         mUnitName: mUnit?.name || '',
+        itemId: recipeForm.itemId,
+        itemName: linkedItem?.name || '',
         ingredients: validIngredients,
         updatedAt: serverTimestamp()
       };
@@ -207,14 +309,14 @@ const StockAnalysis = () => {
   };
 
   const resetRecipeForm = () => {
-    setRecipeForm({ name: '', mUnitId: '', ingredients: [] });
+    setRecipeForm({ name: '', mUnitId: '', itemId: '', itemName: '', ingredients: [] });
     setShowRecipeForm(false);
     setEditingRecipe(null);
   };
 
   const handleEditRecipe = (recipe) => {
     setEditingRecipe(recipe);
-    setRecipeForm({ name: recipe.name, mUnitId: recipe.mUnitId, ingredients: recipe.ingredients || [] });
+    setRecipeForm({ name: recipe.name, mUnitId: recipe.mUnitId, itemId: recipe.itemId || '', itemName: recipe.itemName || '', ingredients: recipe.ingredients || [] });
     setShowRecipeForm(true);
   };
 
@@ -283,6 +385,20 @@ const StockAnalysis = () => {
   const criticalCount = allAssignedItems.filter(i => i.health === 'critical').length;
   const lowCount = allAssignedItems.filter(i => i.health === 'low').length;
   const goodCount = allAssignedItems.filter(i => i.health === 'good').length;
+
+  // Filtered stock items for items tab
+  const filteredStockItems = stockItems.filter(item =>
+    stockItemSearch ? item.name.toLowerCase().includes(stockItemSearch.toLowerCase()) : true
+  );
+
+  // Filtered recipes for recipes tab
+  const filteredRecipes = recipes.filter(r =>
+    recipeSearch
+      ? r.name.toLowerCase().includes(recipeSearch.toLowerCase()) ||
+        (r.itemName || '').toLowerCase().includes(recipeSearch.toLowerCase()) ||
+        (r.mUnitName || '').toLowerCase().includes(recipeSearch.toLowerCase())
+      : true
+  );
 
   /* ── Render ───────────────────────────────────────────── */
   return (
@@ -447,17 +563,30 @@ const StockAnalysis = () => {
       {activeTab === 'items' && (
         <div className="sa-content-layout">
           <div className={`sa-list-section ${showStockForm ? 'shrink' : ''}`}>
+
+            {/* Search bar for stock items */}
+            {stockItems.length > 0 && (
+              <div className="sa-search-box" style={{ marginBottom: 14 }}>
+                <Search size={15} style={{ color: 'var(--text-secondary)' }} />
+                <input
+                  placeholder="Search stock items..."
+                  value={stockItemSearch}
+                  onChange={e => setStockItemSearch(e.target.value)}
+                />
+              </div>
+            )}
+
             {loading ? (
               <div className="sa-loader-container"><div className="loader" /></div>
-            ) : stockItems.length === 0 ? (
+            ) : filteredStockItems.length === 0 ? (
               <div className="sa-empty-state">
                 <div className="sa-empty-icon"><Package size={28} /></div>
-                <h3>No Stock Items</h3>
-                <p>Add your first raw material or ingredient</p>
+                <h3>{stockItemSearch ? 'No Results Found' : 'No Stock Items'}</h3>
+                <p>{stockItemSearch ? 'Try a different search term' : 'Add your first raw material or ingredient'}</p>
               </div>
             ) : (
               <div className="sa-items-list">
-                {stockItems.map(item => {
+                {filteredStockItems.map(item => {
                   const totalQty = stockAssignments
                     .filter(a => a.stockItemId === item.id)
                     .reduce((s, a) => s + (a.currentQty || 0), 0);
@@ -472,6 +601,21 @@ const StockAnalysis = () => {
                         <div className="sa-item-row-meta">
                           <span><Package size={12} />{item.unit}</span>
                           <span>Buffer: {item.bufferQty} {item.unit === 'Weight' ? 'kg' : 'pc'}</span>
+                          {/* Available stock display */}
+                          <span className="sa-item-avail-stock" style={{
+                            fontWeight: '800',
+                            color: health === 'critical' ? '#dc2626' : health === 'low' ? '#d97706' : '#059669',
+                            background: health === 'critical' ? '#fef2f2' : health === 'low' ? '#fffbeb' : '#f0fdf4',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}>
+                            <Layers size={11} />
+                            Available: {totalQty} {item.unit === 'Weight' ? 'kg' : 'pc'}
+                          </span>
                           <span>
                             <span className={`health-badge ${health}`} style={{ fontSize: 10 }}>
                               <HealthIcon level={health} />{HealthLabel[health]}
@@ -549,6 +693,19 @@ const StockAnalysis = () => {
       {activeTab === 'recipes' && (
         <div className="sa-content-layout">
           <div className={`sa-list-section ${showRecipeForm ? 'shrink' : ''}`}>
+
+            {/* Search bar for recipes */}
+            {recipes.length > 0 && (
+              <div className="sa-search-box" style={{ marginBottom: 14 }}>
+                <Search size={15} style={{ color: 'var(--text-secondary)' }} />
+                <input
+                  placeholder="Search by recipe name, item or unit..."
+                  value={recipeSearch}
+                  onChange={e => setRecipeSearch(e.target.value)}
+                />
+              </div>
+            )}
+
             {loading ? (
               <div className="sa-loader-container"><div className="loader" /></div>
             ) : recipes.length === 0 ? (
@@ -557,16 +714,33 @@ const StockAnalysis = () => {
                 <h3>No Recipes Yet</h3>
                 <p>Add recipes to define which raw materials each product uses</p>
               </div>
+            ) : filteredRecipes.length === 0 ? (
+              <div className="sa-empty-state">
+                <div className="sa-empty-icon"><Search size={28} /></div>
+                <h3>No Recipes Match</h3>
+                <p>Try a different search term</p>
+              </div>
             ) : (
               <div className="sa-recipe-grid">
-                {recipes.map(recipe => (
+                {filteredRecipes.map(recipe => (
                   <div key={recipe.id} className="sa-recipe-card">
                     <div className="sa-recipe-card-header">
                       <div>
                         <p className="sa-recipe-name">{recipe.name}</p>
-                        <span className="sa-recipe-munit"><Factory size={11} />{recipe.mUnitName || 'Unknown Unit'}</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '4px', alignItems: 'center' }}>
+                          <span className="sa-recipe-munit"><Factory size={11} />{recipe.mUnitName || 'Unknown Unit'}</span>
+                          {recipe.itemName && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '3px',
+                              fontSize: '11px', fontWeight: '700', color: '#0369a1',
+                              background: '#e0f2fe', padding: '2px 7px', borderRadius: '5px'
+                            }}>
+                              <Package size={10} /> {recipe.itemName}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                         <button className="sa-action-btn edit" onClick={() => handleEditRecipe(recipe)}>
                           <Edit size={13} />
                         </button>
@@ -578,12 +752,29 @@ const StockAnalysis = () => {
                     <div className="sa-ingredients-list">
                       {(recipe.ingredients || []).length === 0 ? (
                         <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>No ingredients</p>
-                      ) : (recipe.ingredients || []).map((ing, i) => (
-                        <div key={i} className="sa-ingredient-row">
-                          <span className="sa-ingredient-name">{ing.stockItemName}</span>
-                          <span>{ing.qty} {ing.unit === 'Weight' ? 'kg' : 'pc'}</span>
-                        </div>
-                      ))}
+                      ) : (recipe.ingredients || []).map((ing, i) => {
+                        const totalAvail = stockAssignments
+                          .filter(a => a.stockItemId === ing.stockItemId)
+                          .reduce((s, a) => s + (a.currentQty || 0), 0);
+                        return (
+                          <div key={i} className="sa-ingredient-row">
+                            <span className="sa-ingredient-name">{ing.stockItemName}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: '700', color: 'var(--primary-color)', fontSize: '12px' }}>
+                                {ing.qty} {ing.unit === 'Weight' ? 'kg' : 'pc'} needed
+                              </span>
+                              <span style={{
+                                fontSize: '11px', fontWeight: '700',
+                                color: totalAvail === 0 ? '#dc2626' : '#059669',
+                                background: totalAvail === 0 ? '#fef2f2' : '#f0fdf4',
+                                padding: '1px 6px', borderRadius: '4px'
+                              }}>
+                                {totalAvail} {ing.unit === 'Weight' ? 'kg' : 'pc'} avail
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -608,29 +799,81 @@ const StockAnalysis = () => {
                       onChange={e => setRecipeForm(p => ({ ...p, name: e.target.value }))}
                       required />
                   </div>
-                  <div className="sa-input-group">
-                    <label>Manufacturing Unit *</label>
-                    <select value={recipeForm.mUnitId}
-                      onChange={e => setRecipeForm(p => ({ ...p, mUnitId: e.target.value }))}
-                      required>
-                      <option value="">Select unit...</option>
-                      {mUnits.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                    </select>
-                  </div>
 
+                  {/* Manufacturing Unit — Custom Searchable Dropdown */}
+                  <SASearchDropdown
+                    label="Manufacturing Unit"
+                    options={mUnits}
+                    value={recipeForm.mUnitId}
+                    onChange={opt => setRecipeForm(p => ({ ...p, mUnitId: opt.id }))}
+                    placeholder="Select manufacturing unit..."
+                    required
+                    getLabel={o => o.name}
+                    getValue={o => o.id}
+                    renderOption={o => (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Factory size={13} style={{ color: 'var(--primary-color)' }} />
+                        {o.name}
+                      </span>
+                    )}
+                  />
+
+                  {/* Assign to Item — Custom Searchable Dropdown */}
+                  <SASearchDropdown
+                    label="Assign to Item"
+                    options={items}
+                    value={recipeForm.itemId}
+                    onChange={opt => setRecipeForm(p => ({ ...p, itemId: opt.id, itemName: opt.name }))}
+                    placeholder="Select item to link recipe..."
+                    required
+                    getLabel={o => o.name}
+                    getValue={o => o.id}
+                    renderOption={o => (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Package size={13} style={{ color: '#0369a1' }} />
+                        {o.name}
+                        {o.category && <span style={{ fontSize: '10px', color: '#64748b', marginLeft: 'auto' }}>{o.category}</span>}
+                      </span>
+                    )}
+                  />
+                  {recipeForm.itemId && (
+                    <p style={{ fontSize: '11px', color: '#059669', fontWeight: '700', marginTop: '-8px', marginBottom: '12px' }}>
+                      ✓ This recipe will be used for stock tracking of "{recipeForm.itemName}" in orders
+                    </p>
+                  )}
+
+                  {/* Ingredients */}
                   <div className="sa-input-group">
                     <label>Ingredients</label>
                     {recipeForm.ingredients.map((ing, idx) => (
-                      <div key={idx} className="sa-ingredient-form-row">
-                        <select value={ing.stockItemId}
-                          onChange={e => updateIngredient(idx, 'stockItemId', e.target.value)}>
-                          <option value="">Select item...</option>
-                          {stockItems.map(si => <option key={si.id} value={si.id}>{si.name}</option>)}
-                        </select>
-                        <input type="number" min="0.01" step="0.01" placeholder="Qty"
+                      <div key={idx} className="sa-ingredient-form-row" style={{ alignItems: 'flex-start', gap: '8px', marginBottom: '10px' }}>
+                        <div style={{ flex: 1 }}>
+                          <SASearchDropdown
+                            options={stockItems}
+                            value={ing.stockItemId}
+                            onChange={opt => updateIngredient(idx, 'stockItemId', opt.id)}
+                            placeholder="Select stock item..."
+                            getLabel={o => o.name}
+                            getValue={o => o.id}
+                            renderOption={o => (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {o.unit === 'Weight' ? <Scale size={12} style={{ color: '#7c3aed' }} /> : <Hash size={12} style={{ color: '#7c3aed' }} />}
+                                {o.name}
+                                <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: 'auto' }}>{o.unit}</span>
+                              </span>
+                            )}
+                          />
+                        </div>
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          placeholder="Qty"
                           value={ing.qty}
-                          onChange={e => updateIngredient(idx, 'qty', e.target.value)} />
-                        <button type="button" className="sa-remove-ingredient-btn"
+                          onChange={e => updateIngredient(idx, 'qty', e.target.value)}
+                          style={{ width: '70px', flexShrink: 0 }}
+                        />
+                        <button type="button" className="sa-remove-ingredient-btn" style={{ marginTop: '2px' }}
                           onClick={() => removeIngredient(idx)}>
                           <Minus size={14} />
                         </button>

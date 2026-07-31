@@ -889,3 +889,143 @@
   .sa-recipe-grid { grid-template-columns: 1fr; }
   .sa-stats-row { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── Custom Searchable Dropdown ─────────────────────────── */
+.sa-custom-dropdown {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.sa-custom-dropdown-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.sa-custom-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  min-height: 40px;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.sa-custom-dropdown-trigger:hover,
+.sa-custom-dropdown-trigger.open {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(52,139,221,0.1);
+}
+
+.sa-dd-selected {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sa-dd-placeholder {
+  color: #94a3b8;
+  flex: 1;
+  font-weight: 400;
+}
+
+.sa-dd-chevron {
+  color: var(--text-secondary);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.sa-dd-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+.sa-custom-dropdown-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.sa-dd-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: #f8fafc;
+}
+
+.sa-dd-search-icon {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.sa-dd-search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  width: 100%;
+  color: var(--text-primary);
+  padding: 0;
+  font-family: inherit;
+}
+
+.sa-dd-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.sa-dd-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s;
+  gap: 8px;
+}
+
+.sa-dd-item:hover {
+  background: #f1f5f9;
+}
+
+.sa-dd-item.active {
+  background: #eff6ff;
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.sa-dd-check {
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.sa-dd-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
