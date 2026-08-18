@@ -20,31 +20,38 @@ import {
   Settings,
   Receipt,
   Barcode,
+  Boxes,
+  Truck,
   X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './Sidebar.css';
 
 export const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard />, path: '/dashboard' },
-  { id: 'orders', label: 'Orders', icon: <ShoppingBag />, path: '/orders' },
+  // Core Modules
+  { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard />, path: '/dashboard', section: 'Core Modules' },
+  { id: 'orders', label: 'Orders', icon: <ShoppingBag />, path: '/orders', section: 'Core Modules' },
+  { id: 'pos-billing', label: 'Billing & POS', icon: <CreditCard />, path: '/pos-billing', section: 'Core Modules' },
+  { id: 'walkin-sales', label: 'Walk-In Sales', icon: <Receipt />, path: '/walkin-sales', section: 'Core Modules' },
 
-  { id: 'pos-billing', label: 'Billing & POS', icon: <CreditCard />, path: '/pos-billing' },
-  { id: 'walkin-sales', label: 'Walk-In Sales', icon: <Receipt />, path: '/walkin-sales' },
-  { id: 'barcode-generator', label: 'Barcode Generator', icon: <Barcode />, path: '/barcode-generator' },
-  { id: 'items', label: 'Products', icon: <Box />, path: '/items' },
-  { id: 'categories', label: 'Collections', icon: <Tag />, path: '/categories' },
-  { id: 'payments', label: 'Payments', icon: <CreditCard />, path: '/payments' },
-  { id: 'store-worksheet', label: 'Work Sheet', icon: <ClipboardList />, path: '/store-worksheet' },
-  { id: 'stores', label: 'Stores', icon: <Store />, path: '/stores' },
-  { id: 'manufacturing', label: 'Manufacturing', icon: <Factory />, path: '/manufacturing' },
-  { id: 'packing', label: 'Packing Units', icon: <Package />, path: '/packing' },
-  { id: 'users', label: 'Users & Roles', icon: <UserCog />, path: '/users' },
-  { id: 'employees', label: 'Employees', icon: <UserCircle />, path: '/employees' },
-  { id: 'timesheet', label: 'Timesheet', icon: <Clock />, path: '/timesheet' },
-  { id: 'support', label: 'Support', icon: <LifeBuoy />, path: '/support' },
+  // Operations
+  { id: 'inventory', label: 'Inventory Analysis', icon: <Boxes />, path: '/inventory', section: 'Operations' },
+  { id: 'vendors', label: 'Vendors', icon: <Truck />, path: '/vendors', section: 'Operations' },
+  { id: 'barcode-generator', label: 'Barcode Generator', icon: <Barcode />, path: '/barcode-generator', section: 'Operations' },
+  { id: 'items', label: 'Products', icon: <Box />, path: '/items', section: 'Operations' },
+  { id: 'categories', label: 'Collections', icon: <Tag />, path: '/categories', section: 'Operations' },
+  { id: 'payments', label: 'Payments', icon: <CreditCard />, path: '/payments', section: 'Operations' },
+  { id: 'store-worksheet', label: 'Work Sheet', icon: <ClipboardList />, path: '/store-worksheet', section: 'Operations' },
+  { id: 'stores', label: 'Stores', icon: <Store />, path: '/stores', section: 'Operations' },
+  { id: 'manufacturing', label: 'Manufacturing', icon: <Factory />, path: '/manufacturing', section: 'Operations' },
+  { id: 'packing', label: 'Packing Units', icon: <Package />, path: '/packing', section: 'Operations' },
+
+  // Admin & Staff
+  { id: 'users', label: 'Users & Roles', icon: <UserCog />, path: '/users', section: 'Admin & Staff' },
+  { id: 'employees', label: 'Employees', icon: <UserCircle />, path: '/employees', section: 'Admin & Staff' },
+  { id: 'timesheet', label: 'Timesheet', icon: <Clock />, path: '/timesheet', section: 'Admin & Staff' },
+  { id: 'support', label: 'Support', icon: <LifeBuoy />, path: '/support', section: 'Admin & Staff' },
 ];
-
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -79,6 +86,10 @@ const Sidebar = ({ isOpen, onClose }) => {
     }
   };
 
+  const coreItems = menuItems.filter(i => i.section === 'Core Modules');
+  const operationsItems = menuItems.filter(i => i.section === 'Operations');
+  const adminItems = menuItems.filter(i => i.section === 'Admin & Staff');
+
   return (
     <aside className={`sidebar ${isOpen ? 'drawer-open' : ''}`}>
       <div className="sidebar-header-mobile">
@@ -94,7 +105,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         onScroll={handleScroll}
       >
         <div className="sidebar-section-title">Core Modules</div>
-        {menuItems.slice(0, 4).map((item) => (
+        {coreItems.map((item) => (
           <Link 
             key={item.id} 
             to={item.path} 
@@ -108,7 +119,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         ))}
 
         <div className="sidebar-section-title">Operations</div>
-        {menuItems.slice(4, 12).map((item) => (
+        {operationsItems.map((item) => (
           <Link 
             key={item.id} 
             to={item.path} 
@@ -121,8 +132,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         ))}
 
         <div className="sidebar-section-title">Admin & Staff</div>
-        {menuItems.slice(12).map((item) => (
-
+        {adminItems.map((item) => (
           <Link 
             key={item.id} 
             to={item.path} 

@@ -35,6 +35,8 @@ import Dashboard from './pages/Dashboard/Dashboard';
 import WalkInSales from './pages/WalkInSales/WalkInSales';
 import SuperAdminPOS from './pages/SuperAdminPOS/SuperAdminPOS';
 import BarcodeGenerator from './pages/BarcodeGenerator/BarcodeGenerator';
+import Vendors from './pages/Vendors/Vendors';
+import Inventory from './pages/Inventory/Inventory';
 import { Toaster } from 'react-hot-toast';
 
 import { NotificationProvider } from './context/NotificationContext';
@@ -103,6 +105,10 @@ function App() {
           <Route path="/barcode-generator" element={<ProtectedRoute><Layout><BarcodeGenerator /></Layout></ProtectedRoute>} />
           <Route path="/walkin-sales" element={<ProtectedRoute><Layout><WalkInSales /></Layout></ProtectedRoute>} />
           <Route path="/store-worksheet" element={<ProtectedRoute><Layout><StoreWorkSheet /></Layout></ProtectedRoute>} />
+
+          <Route path="/inventory" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />
+          <Route path="/inventory/:tab" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />
+          <Route path="/vendors" element={<ProtectedRoute><Layout><Vendors /></Layout></ProtectedRoute>} />
 
           <Route path="/customers" element={<ProtectedRoute><Layout><Customers /></Layout></ProtectedRoute>} />
           <Route path="/customers/:id" element={<ProtectedRoute><Layout><CustomerDetails /></Layout></ProtectedRoute>} />

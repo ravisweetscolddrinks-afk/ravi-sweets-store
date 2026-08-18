@@ -1,0 +1,1115 @@
+.inventory-container {
+  padding: 16px 24px 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .inventory-container {
+    padding: 12px 12px 24px;
+    gap: 12px;
+  }
+}
+
+/* Page Header */
+.inventory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.inventory-title-group h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-title-group p {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
+.inventory-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.inventory-action-btn {
+  height: 34px;
+  padding: 0 14px;
+  background: var(--primary-color);
+  color: #ffffff;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(10, 42, 27, 0.15);
+}
+
+.inventory-action-btn:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(10, 42, 27, 0.22);
+}
+
+.inventory-action-btn.secondary {
+  background: #ffffff;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.inventory-action-btn.secondary:hover {
+  background: #f7f8f9;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+/* Navigation Tabs */
+.inventory-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0;
+  overflow-x: auto;
+}
+
+.inventory-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  position: relative;
+  white-space: nowrap;
+}
+
+.inventory-tab-btn:hover {
+  color: var(--primary-color);
+  background: rgba(10, 42, 27, 0.04);
+}
+
+.inventory-tab-btn.active {
+  color: var(--primary-color);
+  font-weight: 700;
+  background: #ffffff;
+}
+
+.inventory-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: var(--primary-color);
+  border-radius: 2px 2px 0 0;
+}
+
+.inventory-tab-badge {
+  font-size: 10.5px;
+  background: #e1e3e5;
+  color: var(--text-primary);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.inventory-tab-btn.active .inventory-tab-badge {
+  background: #e6f4ea;
+  color: #1b873f;
+}
+
+/* Stats Metric Cards */
+.inventory-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.inventory-stat-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.inventory-stat-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color);
+}
+
+.inventory-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 42, 27, 0.08);
+  color: var(--primary-color);
+  flex-shrink: 0;
+}
+
+.inventory-stat-icon.green {
+  background: #e6f4ea;
+  color: #1b873f;
+}
+
+.inventory-stat-icon.gold {
+  background: rgba(212, 175, 55, 0.15);
+  color: #b58d1b;
+}
+
+.inventory-stat-icon.red {
+  background: #fee2e2;
+  color: var(--error-color);
+}
+
+.inventory-stat-icon.blue {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.inventory-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.inventory-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 1px;
+}
+
+/* Toolbar & Filters */
+.inventory-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inventory-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.inventory-search-wrapper {
+  position: relative;
+  min-width: 200px;
+  max-width: 320px;
+  flex: 1;
+}
+
+.inventory-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.inventory-search-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px 0 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: var(--transition);
+}
+
+.inventory-search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(10, 42, 27, 0.08);
+}
+
+.inventory-select-filter {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.inventory-select-filter:focus {
+  border-color: var(--primary-color);
+}
+
+/* Tab 1: Stock Analysis Layout */
+.analysis-unit-banner {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 12px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  box-shadow: 0 2px 10px rgba(10, 42, 27, 0.12);
+}
+
+.analysis-unit-info h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.analysis-unit-info p {
+  font-size: 12px;
+  opacity: 0.85;
+  margin: 0;
+}
+
+.analysis-unit-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Polaris Table Style */
+.inventory-table-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.inventory-table-responsive {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.inventory-table th {
+  background: #fafafa;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.inventory-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f2f4;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.inventory-table tr:last-child td {
+  border-bottom: none;
+}
+
+.inventory-table tr:hover td {
+  background: #fafafa;
+}
+
+.stock-item-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stock-item-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: #e6f4ea;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12.5px;
+  flex-shrink: 0;
+}
+
+.stock-item-meta h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.stock-item-meta span {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+/* Progress bar inside table */
+.stock-progress-cell {
+  min-width: 130px;
+}
+
+.stock-progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: #e9ecef;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+
+.stock-progress-fill {
+  height: 100%;
+  background: var(--primary-color);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.stock-progress-fill.low {
+  background: #f59e0b;
+}
+
+.stock-progress-fill.danger {
+  background: var(--error-color);
+}
+
+.stock-progress-text {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Stock Status Badges */
+.stock-status-pill {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.stock-status-pill.good {
+  background: #e6f4ea;
+  color: #1b873f;
+}
+
+.stock-status-pill.low {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.stock-status-pill.out {
+  background: #fee2e2;
+  color: var(--error-color);
+}
+
+/* History Audit Log */
+.inventory-history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.inventory-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-timeline-list {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f2f4;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.history-item-row:last-child {
+  border-bottom: none;
+}
+
+.history-left-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-icon-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.history-icon-badge.assigned {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.history-icon-badge.used {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.history-icon-badge.added {
+  background: #e6f4ea;
+  color: #1b873f;
+}
+
+.history-desc h5 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 1px;
+  color: var(--text-primary);
+}
+
+.history-desc span {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.history-qty-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.history-qty-badge.positive {
+  background: #e6f4ea;
+  color: #1b873f;
+}
+
+.history-qty-badge.negative {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Tab 2: Stock Items Grid */
+.stock-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 14px;
+}
+
+.stock-item-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s ease;
+}
+
+.stock-item-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+.stock-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stock-card-category {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-color);
+  background: rgba(212, 175, 55, 0.12);
+  padding: 1px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+}
+
+.stock-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 4px 0 0;
+}
+
+.stock-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.stock-card-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.stock-card-btn:hover {
+  background: #f1f2f4;
+  color: var(--text-primary);
+}
+
+.stock-card-btn.delete:hover {
+  background: #fee2e2;
+  color: var(--error-color);
+}
+
+.stock-card-numbers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: #f8faf9;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.stock-num-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.stock-num-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.stock-num-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--primary-color);
+  margin-top: 1px;
+}
+
+.stock-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid #f1f2f4;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+/* Quick Stock Adjust Buttons */
+.quick-stock-adjust-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quick-adjust-btn {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  background: #f1f2f4;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.quick-adjust-btn:hover {
+  background: var(--primary-color);
+  color: #ffffff;
+}
+
+/* Tab 3: Recipes Grid */
+.recipes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.recipe-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s ease;
+}
+
+.recipe-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+.recipe-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.recipe-item-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recipe-item-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  background: #f1f2f4;
+}
+
+.recipe-item-info h3 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1px;
+}
+
+.recipe-yield-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary-color);
+  background: #e6f4ea;
+  padding: 1px 6px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.recipe-ingredients-box {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recipe-ingredients-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 1px;
+}
+
+.recipe-ingredient-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  padding: 2px 0;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.recipe-ingredient-row:last-child {
+  border-bottom: none;
+}
+
+.recipe-ingredient-name {
+  color: var(--text-primary);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recipe-ingredient-qty {
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.recipe-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid #f1f2f4;
+}
+
+.recipe-cost-estimate {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.recipe-cost-estimate strong {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+/* Modals & Forms */
+.inventory-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 42, 27, 0.45);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.inventory-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.inventory-modal.large {
+  max-width: 640px;
+}
+
+.inventory-modal-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fafafa;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.inventory-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-modal-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: transparent;
+  transition: all 0.15s;
+}
+
+.inventory-modal-close:hover {
+  background: #eaeaea;
+  color: var(--text-primary);
+}
+
+.inventory-modal-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inventory-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .inventory-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inventory-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inventory-form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.inventory-form-group label span {
+  color: var(--error-color);
+}
+
+.inventory-form-input,
+.inventory-form-select,
+.inventory-form-textarea {
+  width: 100%;
+  padding: 7px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 13px;
+  background: #ffffff;
+  color: var(--text-primary);
+  transition: var(--transition);
+}
+
+.inventory-form-input:focus,
+.inventory-form-select:focus,
+.inventory-form-textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(10, 42, 27, 0.08);
+}
+
+/* Dynamic Multi-Ingredient Builder */
+.recipe-builder-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fafafa;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.recipe-builder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.recipe-builder-header h4 {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.recipe-add-row-btn {
+  height: 28px;
+  padding: 0 10px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  color: var(--primary-color);
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+
+.recipe-add-row-btn:hover {
+  background: var(--primary-color);
+  color: #ffffff;
+}
+
+.ingredient-row-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+@media (max-width: 600px) {
+  .ingredient-row-item {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ingredient-remove-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--error-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.ingredient-remove-btn:hover {
+  background: #fee2e2;
+}
+
+.inventory-modal-footer {
+  padding: 12px 18px;
+  background: #fafafa;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.inventory-btn-cancel {
+  height: 34px;
+  padding: 0 14px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.inventory-btn-cancel:hover {
+  background: #f1f2f4;
+}
+
+.inventory-btn-submit {
+  height: 34px;
+  padding: 0 18px;
+  background: var(--primary-color);
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(10, 42, 27, 0.15);
+}
+
+.inventory-btn-submit:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.inventory-btn-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Empty State */
+.inventory-empty-card {
+  background: #ffffff;
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 40px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.inventory-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(10, 42, 27, 0.06);
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inventory-empty-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.inventory-empty-card p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  max-width: 360px;
+  margin: 0;
+}
