@@ -188,7 +188,7 @@ export const PrinterProvider = ({ children }) => {
     setBtDevices([]);
     setTimeout(() => {
       setBtDevices([
-        { name: "Raju Sweets 58mm Thermal BLE-01", type: "Dynamic BLE Printer", rssi: -48 },
+        { name: "Ravi Sweets 58mm Thermal BLE-01", type: "Dynamic BLE Printer", rssi: -48 },
         { name: "Epson TM-m30II-BLE POS-Printer", type: "Counter POS Printer", rssi: -56 },
         { name: "Star Micronics SM-S230i BLE Ticket", type: "Handheld Bluetooth Printer", rssi: -62 }
       ]);
@@ -512,7 +512,7 @@ export const PrinterProvider = ({ children }) => {
             </style>
           </head>
           <body>
-            <div style="font-size: 16px; font-weight: bold;">RAJU GHEE SWEETS</div>
+            <div style="font-size: 16px; font-weight: bold;">RAVI GHEE SWEETS</div>
             <div>RK3568 POS THERMAL PRINTER</div>
             <div class="divider"></div>
             <div>STATUS: ONLINE & ACTIVE</div>
@@ -601,7 +601,7 @@ export const PrinterProvider = ({ children }) => {
             </style>
           </head>
           <body>
-            <div style="font-size: 16px; font-weight: bold;">RAJU GHEE SWEETS</div>
+            <div style="font-size: 16px; font-weight: bold;">RAVI GHEE SWEETS</div>
             <div>WI-FI NETWORK THERMAL PRINTER</div>
             <div class="divider"></div>
             <div>STATUS: ONLINE & CONNECTED</div>

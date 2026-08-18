@@ -306,7 +306,7 @@ export const buildBillESCPOS = (bill, charsPerLine = 48) => {
 
   // Store Header
   bytes.push(...CENTER, ...BOLD_ON, ...DOUBLE_SIZE);
-  bytes.push(...encoder.encode('SRI RAJU SWEETS\n'));
+  bytes.push(...encoder.encode('SRI RAVI SWEETS\n'));
   bytes.push(...NORMAL_SIZE, ...BOLD_OFF);
   bytes.push(...encoder.encode('56-11-20B, OPP JD TOWERS, PATAMATA MAIN\nROAD, VIJAYAWADA, ANDHRA PRADESH, 520010\n'));
   bytes.push(...BOLD_ON);
@@ -464,7 +464,7 @@ export const buildOrderESCPOS = (order, charsPerLine = 48) => {
 
   // Header
   bytes.push(...CENTER, ...DOUBLE_SIZE);
-  bytes.push(...encoder.encode('RAJU GHEE SWEETS\n'));
+  bytes.push(...encoder.encode('RAVI GHEE SWEETS\n'));
   bytes.push(...NORMAL_SIZE);
   bytes.push(...encoder.encode(`${order.storeName || 'Outlet Store'}\n`));
   bytes.push(...encoder.encode('Quality Sweets & Savouries\n'));

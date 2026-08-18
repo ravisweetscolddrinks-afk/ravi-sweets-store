@@ -8,7 +8,7 @@ const Footer = () => {
       <div className="footer-left">
         <div className="footer-logo">🏺</div>
         <div className="footer-info">
-          <h3>Raju Ghee Sweets</h3>
+          <h3>Ravi Ghee Sweets</h3>
           <p>Premium Quality, Traditional Taste</p>
         </div>
       </div>
@@ -20,7 +20,7 @@ const Footer = () => {
 
       <div className="footer-right">
         <span>|</span>
-        <span>© 2024 Raju Ghee Sweets. All rights reserved.</span>
+        <span>© 2026 Ravi Ghee Sweets. All rights reserved.</span>
       </div>
 
       <div className="footer-pattern">

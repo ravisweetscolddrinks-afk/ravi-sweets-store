@@ -127,7 +127,7 @@ export function getInvoiceHtml(order) {
   }
 
   // Retrieve store/seller details
-  const storeName = order.storeName || 'Raju Ghee Sweets';
+  const storeName = order.storeName || 'Ravi Ghee Sweets';
   const sellerGSTIN = '37AEQPK1348P1ZS'; // Official GSTIN
 
   const tableHeadersHtml = isIntrastate
@@ -374,7 +374,7 @@ export function getInvoiceHtml(order) {
             <tr>
               <td>
                 <img src="${logo}" alt="Logo" class="logo" /><br/>
-                <strong style="font-size: 16px; color: #0c4a24;">RAJU GHEE SWEETS</strong><br/>
+                <strong style="font-size: 16px; color: var(--primary-color, #1e40af);">RAVI GHEE SWEETS</strong><br/>
                 <span>Store: ${storeName}</span><br/>
                 <span>Andhra Pradesh, India</span><br/>
                 <strong>GSTIN: ${sellerGSTIN}</strong>
@@ -402,7 +402,7 @@ export function getInvoiceHtml(order) {
             <tbody>
               <tr>
                 <td>
-                  <strong>RAJU GHEE SWEETS</strong><br/>
+                  <strong>RAVI GHEE SWEETS</strong><br/>
                   Store Location: ${storeName}<br/>
                   Andhra Pradesh, India<br/>
                   GSTIN: <strong>${sellerGSTIN}</strong><br/>
@@ -435,7 +435,7 @@ export function getInvoiceHtml(order) {
 
           <div class="amount-words">
             Amount Chargeable (in words):<br/>
-            <span style="font-size: 13px; color: #0c4a24;">${numberToWords(totalAmount)}</span>
+            <span style="font-size: 13px; color: var(--primary-color, #1e40af);">${numberToWords(totalAmount)}</span>
           </div>
 
           <table class="totals-table">
@@ -443,9 +443,9 @@ export function getInvoiceHtml(order) {
               <td style="width: 55%; vertical-align: top; font-size: 11px; color: #333; line-height: 1.5; padding: 10px;">
                 ${gstBreakupHtml}
                 <div style="margin-top: 12px; border-top: 1px dashed #ddd; padding-top: 8px;">
-                  <strong style="color: #0c4a24;">Bank Details for Payment:</strong><br/>
+                  <strong style="color: var(--primary-color, #1e40af);">Bank Details for Payment:</strong><br/>
                   <strong>Bank Name:</strong> HDFC Bank<br/>
-                  <strong>Account Name:</strong> RAJU GHEE SWEETS<br/>
+                  <strong>Account Name:</strong> RAVI GHEE SWEETS<br/>
                   <strong>Account Number:</strong> 50200046843751<br/>
                   <strong>IFSC Code:</strong> HDFC0009088<br/>
                   <strong>Branch:</strong> Satyanayanapuram, vijayawada
@@ -461,7 +461,7 @@ export function getInvoiceHtml(order) {
                     <td style="font-weight: bold; padding: 8px;">Total GST Tax Amount:</td>
                     <td style="text-align: right; padding: 8px;">₹${totalGST.toFixed(2)}</td>
                   </tr>
-                  <tr style="background-color: #e2f0d9; font-size: 14px; font-weight: bold; color: #0c4a24;">
+                  <tr style="background-color: #ebf4fc; font-size: 14px; font-weight: bold; color: var(--primary-color, #1e40af);">
                     <td style="padding: 10px;">Grand Total (Incl. GST):</td>
                     <td style="text-align: right; padding: 10px;">₹${totalAmount.toFixed(2)}</td>
                   </tr>
@@ -489,7 +489,7 @@ export function getInvoiceHtml(order) {
             </div>
             <div style="float: right; width: 40%; text-align: right;">
               <div class="signature-box">
-                <span style="font-size: 10px; color: #555;">for Raju Ghee Sweets</span><br/><br/><br/>
+                <span style="font-size: 10px; color: #555;">for Ravi Ghee Sweets</span><br/><br/><br/>
                 <strong>Authorized Signatory</strong>
               </div>
             </div>

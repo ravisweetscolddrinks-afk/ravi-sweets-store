@@ -20,19 +20,13 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Background FCM message received:', payload);
 
-  const notificationTitle = payload.notification?.title || '🔔 Raju Ghee Sweets';
+  const notificationTitle = payload.notification?.title || '🔔 Ravi Ghee Sweets';
   const notificationOptions = {
     body: payload.notification?.body || 'You have a new update',
     icon: '/logo.png',
     badge: '/logo.png',
-    tag: payload.data?.tag || `raju-sweets-${Date.now()}`,
-    requireInteraction: true,
-    actions: [
-      { action: 'open', title: '👀 Open App' }
-    ],
     data: {
-      url: payload.data?.link || '/',
-      ...payload.data
+      url: payload.data?.url || '/'
     }
   };
 
@@ -62,7 +56,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // ─── PWA Cache Strategy ───────────────────────────────────────────────────────
-const CACHE_NAME = 'raju-sweets-cache-v1';
+const CACHE_NAME = 'ravi-sweets-cache-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',

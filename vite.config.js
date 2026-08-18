@@ -14,13 +14,13 @@ export default defineConfig({
         if (fs.existsSync(swPath)) {
           let swContent = fs.readFileSync(swPath, 'utf8')
           const timestamp = Date.now()
-          // Replace 'raju-sweets-cache-v1' with a dynamic timestamp
+          // Replace 'ravi-sweets-cache-v1' with a dynamic timestamp
           swContent = swContent.replace(
-            /raju-sweets-cache-v1/g,
-            `raju-sweets-cache-${timestamp}`
+            /ravi-sweets-cache-v1/g,
+            `ravi-sweets-cache-${timestamp}`
           )
           fs.writeFileSync(swPath, swContent, 'utf8')
-          console.log(`\n✓ PWA Service Worker version updated to: raju-sweets-cache-${timestamp}\n`)
+          console.log(`\n✓ PWA Service Worker version updated to: ravi-sweets-cache-${timestamp}\n`)
         }
       }
     }

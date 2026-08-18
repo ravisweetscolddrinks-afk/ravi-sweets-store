@@ -36,7 +36,7 @@ import { usePrinter } from '../../context/PrinterContext';
 import './BarcodeGenerator.css';
 
 // Default store branding header
-const STORE_NAME = "SRI RAJU SWEETS";
+const STORE_NAME = "SRI RAVI SWEETS";
 
 const WEIGHT_PRESETS = [
   { label: '50g', value: 50 },
@@ -295,7 +295,7 @@ TEXT ${230 + x2}, ${102 + y2}, "2", 0, 1, 1, "MRP: ${col2.mrp}/-"
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Barcodes - Raju Ghee Sweets</title>
+          <title>Barcodes - Ravi Ghee Sweets</title>
           <style>
             @page {
               size: 104mm auto;
@@ -994,7 +994,7 @@ TEXT ${230 + x2}, ${102 + y2}, "2", 0, 1, 1, "MRP: ${col2.mrp}/-"
 
             <div className="sticker-preview-wrapper">
               <div className="physical-sticker-preview" id="physical-sticker-preview">
-                {/* Header: SRI RAJU SWEETS */}
+                {/* Header: SRI RAVI SWEETS */}
                 <div className="preview-store-header">{STORE_NAME}</div>
                 
                 {/* Second Line: Item Name (Left) | Weight (Right) */}

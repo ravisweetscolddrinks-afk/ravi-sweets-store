@@ -27,7 +27,7 @@ const Onboarding = () => {
       try {
         let userProfile = null;
         let employeeProfile = null;
-        if (auth.currentUser?.email === 'admin@rajusweets.com') {
+        if (auth.currentUser?.email === 'admin@ravisweets.com' || auth.currentUser?.email === 'admin@rajusweets.com') {
            userProfile = {
              name: "Super Admin",
              role: 'admin',
@@ -112,8 +112,8 @@ const Onboarding = () => {
       <header className="onb-top-header">
         <div className="onb-header-left">
           <div className="onb-logo-wrapper">
-            <img src={logo} alt="Raju Ghee Sweets" className="onb-logo-img" />
-            <span className="onb-brand-title">Raju Ghee Sweets</span>
+            <img src={logo} alt="Ravi Ghee Sweets" className="onb-logo-img" />
+            <span className="onb-brand-title">Ravi Ghee Sweets</span>
           </div>
           <span className="onb-season-tag">Portal Gateway</span>
         </div>

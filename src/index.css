@@ -1,11 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --primary-color: #0A2A1B; /* Raju Green */
-  --primary-hover: #14422c;
-  --primary-light: #1E4D38;
-  --primary-bg-soft: #e6f4ea;
-  --accent-color: #D4AF37; /* Gold */
+  --primary-color: #348bdd; /* Ravi Blue */
+  --primary-hover: #2572be;
+  --primary-light: #4ea1eb;
+  --primary-bg-soft: #ebf4fc;
+  --accent-color: #fcc21c; /* Gold */
   
   /* Polaris Design Tokens */
   --polaris-bg-canvas: #f1f2f4;

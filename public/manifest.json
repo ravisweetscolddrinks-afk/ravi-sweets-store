@@ -1,11 +1,11 @@
 {
-  "name": "Raju Ghee Sweets",
-  "short_name": "Raju Sweets",
+  "name": "Ravi Ghee Sweets",
+  "short_name": "Ravi Sweets",
   "description": "Premium sweet store, ordering and worksheet management app.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#0a2a1b",
+  "theme_color": "#348bdd",
   "orientation": "portrait-primary",
   "icons": [
     {

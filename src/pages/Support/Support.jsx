@@ -118,7 +118,7 @@ const Support = () => {
           <div className="rocket-illustration">🚀</div>
           <div className="banner-info">
             <h2>GamaNext Solutions</h2>
-            <p>Accelerating Digital Transformation for <strong>Raju Ghee Sweets</strong></p>
+            <p>Accelerating Digital Transformation for <strong>Ravi Ghee Sweets</strong></p>
           </div>
         </div>
         <div className="store-illustration">🏪</div>

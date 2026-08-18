@@ -107,8 +107,8 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <Link to="/" className="header-logo">
-            <img src={logo} alt="Raju Ghee Sweets" className="header-logo-img" />
-            {/* <span className="header-brand-title">Raju Ghee Sweets</span> */}
+            <img src={logo} alt="Ravi Ghee Sweets" className="header-logo-img" />
+            {/* <span className="header-brand-title">Ravi Ghee Sweets</span> */}
           </Link>
           <span className="header-season-tag">v2.0 Admin</span>
         </div>
@@ -245,7 +245,7 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
           {/* Store Switcher Badge */}
           <div className="header-store-badge">
             <div className="header-avatar">RG</div>
-            <span className="header-store-name">Raju Ghee Sweets</span>
+            <span className="header-store-name">Ravi Ghee Sweets</span>
           </div>
         </div>
       </header>

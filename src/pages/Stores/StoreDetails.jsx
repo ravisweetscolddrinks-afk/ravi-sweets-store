@@ -278,8 +278,8 @@ const StoreDetails = () => {
       const billData = {
         billId,
         storeId: id,
-        storeName: store?.name || 'Raju Ghee Sweets',
-        tradeName: store?.tradeName || store?.name || 'Raju Ghee Sweets',
+        storeName: store?.name || 'Ravi Ghee Sweets',
+        tradeName: store?.tradeName || store?.name || 'Ravi Ghee Sweets',
         storeGstNumber: store?.gstNumber || '',
         storeAddress: store?.address || '',
         storePhone: store?.phone || '',

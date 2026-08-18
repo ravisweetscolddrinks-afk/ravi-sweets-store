@@ -263,7 +263,7 @@ const Stores = () => {
                     name="name" 
                     value={formData.name}
                     onChange={handleInputChange}
-                    placeholder="e.g. Raju Ghee Sweets Main Branch"
+                    placeholder="e.g. Ravi Ghee Sweets Main Branch"
                     required 
                   />
                 </div>
@@ -275,7 +275,7 @@ const Stores = () => {
                     name="tradeName" 
                     value={formData.tradeName}
                     onChange={handleInputChange}
-                    placeholder="e.g. SRI RAJU SWEETS & BAKERY"
+                    placeholder="e.g. SRI RAVI SWEETS & BAKERY"
                   />
                 </div>
 

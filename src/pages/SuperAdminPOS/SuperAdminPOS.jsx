@@ -345,7 +345,7 @@ const SuperAdminPOS = () => {
         billId,
         storeId: selectedStoreId,
         storeName: selectedStoreName || selectedStoreObj?.name || 'Outlet Store',
-        tradeName: selectedStoreObj?.tradeName || selectedStoreObj?.name || 'Raju Ghee Sweets',
+        tradeName: selectedStoreObj?.tradeName || selectedStoreObj?.name || 'Ravi Ghee Sweets',
         storeGstNumber: selectedStoreObj?.gstNumber || '',
         storeAddress: selectedStoreObj?.address || '',
         storePhone: selectedStoreObj?.phone || '',

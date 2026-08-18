@@ -1,5 +1,5 @@
 /**
- * Receipt Printing Helper for Raju Ghee Sweets
+ * Receipt Printing Helper for Ravi Ghee Sweets
  * Generates exact ESC/POS binary data and HTML layouts matching physical thermal receipts.
  */
 
@@ -92,7 +92,7 @@ export const generateReceiptHTML = (bill = {}) => {
       <body>
         <div class="right" style="font-size: 10px;">Customer Copy</div>
         <div class="center bold" style="font-size: 16px; margin-top: 2px;">
-          ${bill.tradeName || 'SRI RAJU SWEETS'}
+          ${bill.tradeName || 'SRI RAVI SWEETS'}
         </div>
         ${bill.storeName && bill.storeName !== bill.tradeName ? `<div class="center bold" style="font-size: 12px; margin-top: 1px;">${bill.storeName}</div>` : ''}
         <div class="center" style="font-size: 10px; margin-top: 2px; line-height: 1.2;">
@@ -280,7 +280,7 @@ export const generateOrderReceiptHTML = (order = {}) => {
       <body>
         <div class="right" style="font-size: 10px;">Order Copy</div>
         <div class="center bold" style="font-size: 16px; margin-top: 2px;">
-          ${order.tradeName || 'SRI RAJU SWEETS'}
+          ${order.tradeName || 'SRI RAVI SWEETS'}
         </div>
         <div class="center bold" style="font-size: 12px; margin-top: 1px;">
           ${order.storeName || 'Store Outlet'}
@@ -413,7 +413,7 @@ export const buildReceiptESCPOS = (bill = {}) => {
 
   // --- Header ---
   push(INIT, CENTER, DBL);
-  push(txt((bill?.tradeName || 'SRI RAJU SWEETS') + '\n'));
+  push(txt((bill?.tradeName || 'SRI RAVI SWEETS') + '\n'));
   push(NORMAL);
   if (bill?.storeName && bill?.storeName !== bill?.tradeName) {
     push(txt(bill.storeName + '\n'));
@@ -532,7 +532,7 @@ export const buildOrderESCPOS = (order = {}) => {
 
   // --- Header ---
   push(INIT, CENTER, DBL);
-  push(txt((order?.tradeName || 'SRI RAJU SWEETS') + '\n'));
+  push(txt((order?.tradeName || 'SRI RAVI SWEETS') + '\n'));
   push(NORMAL);
   push(txt(`${order?.storeName || 'Vijayawada'}\n`));
   if (order?.storeAddress) {

@@ -83,7 +83,7 @@ const Loader = ({ type = 'section', size = 'medium', message = 'Preparing fresh 
 
         {/* Brand/Status Text */}
         <div className="premium-loader-brand-container">
-          <h1 className="premium-loader-title">RAJU GHEE SWEETS</h1>
+          <h1 className="premium-loader-title">RAVI GHEE SWEETS</h1>
           <div className="premium-loader-divider">
             <div className="divider-dot" />
             <div className="divider-line" />

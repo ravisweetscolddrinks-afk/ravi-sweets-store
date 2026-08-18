@@ -1890,7 +1890,7 @@ const StorePortal = () => {
         city: customer.city || '',
         state: customer.state || '',
         storeId: id,
-        storeName: store?.name || 'Raju Ghee Sweets',
+        storeName: store?.name || 'Ravi Ghee Sweets',
         pUnitId: selectedPUnit,
         globalDescription,
         mUnitDescription,
@@ -2159,8 +2159,8 @@ const StorePortal = () => {
       const billData = {
         billId,
         storeId: id,
-        storeName: store?.name || 'Raju Ghee Sweets',
-        tradeName: store?.tradeName || store?.name || 'Raju Ghee Sweets',
+        storeName: store?.name || 'Ravi Ghee Sweets',
+        tradeName: store?.tradeName || store?.name || 'Ravi Ghee Sweets',
         storeGstNumber: store?.gstNumber || '',
         storeAddress: store?.address || '',
         storePhone: store?.phone || '',
@@ -4368,7 +4368,7 @@ const StorePortal = () => {
 
               <div className="receipt-print-area">
                 <div className="receipt-brand">
-                  <h2>Raju Ghee Sweets</h2>
+                  <h2>Ravi Ghee Sweets</h2>
                   <p>{selectedReceiptBill.storeName || 'Outlet Store'}</p>
                 </div>
 
@@ -5192,7 +5192,7 @@ const StorePortal = () => {
                 <div className="ord-preview-body">
                   <div className="ord-preview-top" style={{ marginBottom: '15px' }}>
                     <div>
-                      <h3>Raju Ghee Sweets</h3>
+                      <h3>Ravi Ghee Sweets</h3>
                       <p>{previewOrder.storeName}</p>
                       <p style={{ marginTop: '6px' }}>
                         <strong>Order:</strong> {previewOrder.serialNumber ? `S${previewOrder.serialNumber}-${previewOrder.orderId}` : `#${previewOrder.orderId}`}

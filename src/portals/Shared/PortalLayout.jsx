@@ -133,8 +133,8 @@ const PortalLayout = ({ children, title, links }) => {
             {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <Link to="/onboarding" className="portal-header-logo">
-            <img src={logo} alt="Raju Ghee Sweets" className="portal-header-logo-img" />
-            <span className="portal-header-brand-title">Raju Ghee Sweets</span>
+            <img src={logo} alt="Ravi Ghee Sweets" className="portal-header-logo-img" />
+            <span className="portal-header-brand-title">Ravi Ghee Sweets</span>
           </Link>
           <span className="portal-header-season-tag">
             {entityRole.includes('Store') ? 'v2.0 Store' : entityRole.includes('Manufacturing') ? 'v2.0 Kitchen' : entityRole.includes('Packing') ? 'v2.0 Packing' : 'v2.0 Staff'}

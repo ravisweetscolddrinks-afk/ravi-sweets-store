@@ -312,7 +312,7 @@ const IndividualPortal = () => {
         </head>
         <body>
           <div class="header">
-            <h1>Raju Ghee Sweets</h1>
+            <h1>Ravi Ghee Sweets</h1>
             <p>Employee Monthly Salary Slip</p>
           </div>
 
@@ -422,7 +422,7 @@ const IndividualPortal = () => {
 
           <div class="footer">
             <p>This is a computer generated document and does not require signature.</p>
-            <p>© ${selectedYear} Raju Ghee Sweets. All rights reserved.</p>
+            <p>© ${selectedYear} Ravi Ghee Sweets. All rights reserved.</p>
           </div>
         </body>
       </html>
