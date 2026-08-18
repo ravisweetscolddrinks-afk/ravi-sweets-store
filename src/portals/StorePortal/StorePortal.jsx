@@ -69,6 +69,8 @@ import {
 
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import CommonDropdown from '../../components/Common/CustomDropdown';
+import CommonDatePicker from '../../components/Common/CustomDatePicker';
 import './StorePortal.css';
 import '../../pages/Orders/Orders.css';
 import Payments from '../../pages/Payments/Payments';
@@ -2329,51 +2331,56 @@ const StorePortal = () => {
                 <div className="ord-filter-controls-grid">
                   <div className="ord-filter-group">
                     <label>Status</label>
-                    <select
+                    <CommonDropdown
+                      size="sm"
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
-                    >
-                      <option value="All">All Statuses</option>
-                      <option value="new">New</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Partially Moved to Store">Partially Moved</option>
-                      <option value="Moved to Store">Moved to Store</option>
-                      <option value="Partially Ready for Delivery">Partially Ready</option>
-                      <option value="Ready for Delivery">Ready for Delivery</option>
-                      <option value="Delivered">Delivered</option>
-                    </select>
+                      options={[
+                        { value: 'All', label: 'All Statuses' },
+                        { value: 'new', label: 'New' },
+                        { value: 'In Progress', label: 'In Progress' },
+                        { value: 'Partially Moved to Store', label: 'Partially Moved' },
+                        { value: 'Moved to Store', label: 'Moved to Store' },
+                        { value: 'Partially Ready for Delivery', label: 'Partially Ready' },
+                        { value: 'Ready for Delivery', label: 'Ready for Delivery' },
+                        { value: 'Delivered', label: 'Delivered' }
+                      ]}
+                    />
                   </div>
 
                   <div className="ord-filter-group">
                     <label>Payment</label>
-                    <select
+                    <CommonDropdown
+                      size="sm"
                       value={paymentStatusFilter}
                       onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                    >
-                      <option value="All">All Payments</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Partial">Partial</option>
-                      <option value="Done">Done</option>
-                    </select>
+                      options={[
+                        { value: 'All', label: 'All Payments' },
+                        { value: 'Pending', label: 'Pending' },
+                        { value: 'Partial', label: 'Partial' },
+                        { value: 'Done', label: 'Done' }
+                      ]}
+                    />
                   </div>
 
                   <div className="ord-filter-group">
                     <label>Store Outlet</label>
-                    <select
+                    <CommonDropdown
+                      size="sm"
                       value={storeFilter}
                       onChange={(e) => setStoreFilter(e.target.value)}
-                    >
-                      <option value="All">All Outlets</option>
-                      {stores.map(st => (
-                        <option key={st.id} value={st.id}>{st.name}</option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: 'All', label: 'All Outlets' },
+                        ...stores.map(st => ({ value: st.id, label: st.name }))
+                      ]}
+                    />
                   </div>
 
                   <div className="ord-filter-group">
                     <label><Calendar size={12} /> Delivery Date</label>
-                    <input
-                      type="date"
+                    <CommonDatePicker
+                      size="sm"
+                      placeholder="Pick date..."
                       value={deliveryDateFilter}
                       onChange={(e) => setDeliveryDateFilter(e.target.value)}
                     />
@@ -3029,12 +3036,10 @@ const StorePortal = () => {
 
               {wsTab === 'active' && (
                 <div className="st-date-filter-bar">
-                  <div className="st-filter-left">
-                    <Calendar size={18} className="st-filter-cal-icon" />
-                    <span className="st-filter-label">Allocation Date:</span>
-                    <input 
-                      type="date" 
-                      className="st-date-picker-input"
+                  <div className="st-filter-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '240px' }}>
+                    <span className="st-filter-label" style={{ whiteSpace: 'nowrap' }}>Allocation:</span>
+                    <CommonDatePicker 
+                      size="sm"
                       value={wsDate} 
                       onChange={(e) => setWsDate(e.target.value)} 
                     />
@@ -3697,15 +3702,13 @@ const StorePortal = () => {
               <div className="st-billing-history-tab">
                 {/* Date Filter Bar */}
                 <div className="st-date-filter-bar">
-                  <div className="st-filter-left">
-                    <Calendar size={18} className="st-filter-cal-icon" />
-                    <span className="st-filter-label">Filter Bills by Date:</span>
-                    <input 
-                      type="date" 
-                      className="st-date-picker-input"
+                  <div className="st-filter-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '250px' }}>
+                    <span className="st-filter-label" style={{ whiteSpace: 'nowrap' }}>Filter Bills:</span>
+                    <CommonDatePicker 
+                      size="sm"
                       value={billsFilterDate} 
                       onChange={(e) => setBillsFilterDate(e.target.value)} 
-                  />
+                    />
                   </div>
                   <button 
                     className="st-today-reset-btn"
@@ -4552,20 +4555,11 @@ const StorePortal = () => {
                   <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>Delivery Date *</label>
-                      <input 
-                        type="date"
-                        required
+                      <CommonDatePicker 
+                        placeholder="Pick delivery date..."
                         value={deliveryDate}
                         onChange={(e) => setDeliveryDate(e.target.value)}
-                        style={{
-                          height: '38px',
-                          padding: '0 12px',
-                          border: formErrors.deliveryDate ? '1.5px solid #dc2626' : '1px solid var(--border-color)',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          width: '100%',
-                          boxSizing: 'border-box'
-                        }}
+                        className={formErrors.deliveryDate ? 'error-border' : ''}
                       />
                       {formErrors.deliveryDate && (
                         <span style={{ color: '#dc2626', fontSize: '11px', fontWeight: '700', marginTop: '4px', display: 'block' }}>

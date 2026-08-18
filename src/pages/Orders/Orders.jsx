@@ -49,6 +49,8 @@ import {
 } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import CommonDropdown from '../../components/Common/CustomDropdown';
+import CommonDatePicker from '../../components/Common/CustomDatePicker';
 import './Orders.css';
 import { triggerWhatsAppOrderReady, triggerWhatsAppOrderConfirmation } from '../../utils/whatsapp';
 
@@ -1424,51 +1426,56 @@ const Orders = () => {
           <div className="ord-filter-controls-grid">
             <div className="ord-filter-group">
               <label>Status</label>
-              <select
+              <CommonDropdown
+                size="sm"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="All">All Statuses</option>
-                <option value="new">New</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Partially Moved to Store">Partially Moved</option>
-                <option value="Moved to Store">Moved to Store</option>
-                <option value="Partially Ready for Delivery">Partially Ready</option>
-                <option value="Ready for Delivery">Ready for Delivery</option>
-                <option value="Delivered">Delivered</option>
-              </select>
+                options={[
+                  { value: 'All', label: 'All Statuses' },
+                  { value: 'new', label: 'New' },
+                  { value: 'In Progress', label: 'In Progress' },
+                  { value: 'Partially Moved to Store', label: 'Partially Moved' },
+                  { value: 'Moved to Store', label: 'Moved to Store' },
+                  { value: 'Partially Ready for Delivery', label: 'Partially Ready' },
+                  { value: 'Ready for Delivery', label: 'Ready for Delivery' },
+                  { value: 'Delivered', label: 'Delivered' }
+                ]}
+              />
             </div>
 
             <div className="ord-filter-group">
               <label>Payment</label>
-              <select
+              <CommonDropdown
+                size="sm"
                 value={paymentStatusFilter}
                 onChange={(e) => setPaymentStatusFilter(e.target.value)}
-              >
-                <option value="All">All Payments</option>
-                <option value="Pending">Pending</option>
-                <option value="Partial">Partial</option>
-                <option value="Done">Done</option>
-              </select>
+                options={[
+                  { value: 'All', label: 'All Payments' },
+                  { value: 'Pending', label: 'Pending' },
+                  { value: 'Partial', label: 'Partial' },
+                  { value: 'Done', label: 'Done' }
+                ]}
+              />
             </div>
 
             <div className="ord-filter-group">
               <label>Store Outlet</label>
-              <select
+              <CommonDropdown
+                size="sm"
                 value={storeFilter}
                 onChange={(e) => setStoreFilter(e.target.value)}
-              >
-                <option value="All">All Stores</option>
-                {stores.map(st => (
-                  <option key={st.id} value={st.id}>{st.name}</option>
-                ))}
-              </select>
+                options={[
+                  { value: 'All', label: 'All Stores' },
+                  ...stores.map(st => ({ value: st.id, label: st.name }))
+                ]}
+              />
             </div>
 
             <div className="ord-filter-group">
               <label><Calendar size={12} /> Delivery Date</label>
-              <input
-                type="date"
+              <CommonDatePicker
+                size="sm"
+                placeholder="Pick date..."
                 value={deliveryDateFilter}
                 onChange={(e) => setDeliveryDateFilter(e.target.value)}
               />
@@ -2188,23 +2195,14 @@ const Orders = () => {
                   <div className="ord-delivery-fields-row">
                     <div style={{ flex: 1, minWidth: '150px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>Delivery Date *</label>
-                      <input
-                        type="date"
-                        required
+                      <CommonDatePicker
+                        placeholder="Select delivery target date..."
                         value={deliveryDate}
                         onChange={(e) => setDeliveryDate(e.target.value)}
-                        style={{
-                          height: '38px',
-                          padding: '0 12px',
-                          border: formErrors.deliveryDate ? '1.5px solid #dc2626' : '1px solid var(--border-color)',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          width: '100%',
-                          boxSizing: 'border-box'
-                        }}
+                        className={formErrors.deliveryDate ? 'error-border' : ''}
                       />
                       {formErrors.deliveryDate && (
-                        <span style={{ color: '#dc2626', fontSize: '11px', fontWeight: '700', marginTop: '4px', display: 'block' }}>
+                        <span style={{ color: '#dc2626', fontSize: '11px', fontWeight: '700' }}>
                           {formErrors.deliveryDate}
                         </span>
                       )}

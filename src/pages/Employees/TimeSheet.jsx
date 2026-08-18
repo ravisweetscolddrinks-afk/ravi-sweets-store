@@ -39,6 +39,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/Layout/Layout';
 import { printHTMLContent } from '../../context/PrinterContext';
+import CustomDropdown from '../../components/Common/CustomDropdown';
+import CustomDatePicker from '../../components/Common/CustomDatePicker';
 import './TimeSheet.css';
 
 const TimeSheet = () => {
@@ -810,10 +812,9 @@ const TimeSheet = () => {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  <div className="ts-date-wrapper">
-                    <Calendar size={18} className="ts-cal-icon" />
-                    <input 
-                      type="date" 
+                  <div className="ts-date-wrapper" style={{ width: '200px' }}>
+                    <CustomDatePicker 
+                      size="sm"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
                     />
@@ -898,13 +899,23 @@ const TimeSheet = () => {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  <div className="ts-month-selectors">
-                    <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}>
-                      {monthsList.map((m, idx) => <option key={idx} value={idx}>{m}</option>)}
-                    </select>
-                    <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
-                      {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
+                  <div className="ts-month-selectors" style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ width: '130px' }}>
+                      <CustomDropdown 
+                        size="sm"
+                        value={selectedMonth} 
+                        onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                        options={monthsList.map((m, idx) => ({ value: idx, label: m }))}
+                      />
+                    </div>
+                    <div style={{ width: '90px' }}>
+                      <CustomDropdown 
+                        size="sm"
+                        value={selectedYear} 
+                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                        options={[2025, 2026, 2027].map(y => ({ value: y, label: String(y) }))}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -972,13 +983,23 @@ const TimeSheet = () => {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
-                  <div className="ts-month-selectors">
-                    <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}>
-                      {monthsList.map((m, idx) => <option key={idx} value={idx}>{m}</option>)}
-                    </select>
-                    <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
-                      {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
+                  <div className="ts-month-selectors" style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ width: '130px' }}>
+                      <CustomDropdown 
+                        size="sm"
+                        value={selectedMonth} 
+                        onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                        options={monthsList.map((m, idx) => ({ value: idx, label: m }))}
+                      />
+                    </div>
+                    <div style={{ width: '90px' }}>
+                      <CustomDropdown 
+                        size="sm"
+                        value={selectedYear} 
+                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                        options={[2025, 2026, 2027].map(y => ({ value: y, label: String(y) }))}
+                      />
+                    </div>
                   </div>
                 </div>
 

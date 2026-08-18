@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import CustomDropdown from '../../components/Common/CustomDropdown';
 import './Payments.css';
 
 // --- Sub-component to fetch and render installments history in accordion row ---
@@ -360,24 +361,27 @@ const Payments = ({ storeId = null }) => {
         </div>
 
         {/* Mobile Tab Dropdown Filter */}
-        <div className="pay-tabs-dropdown-wrapper">
+        <div className="pay-tabs-dropdown-wrapper" style={{ width: '100%', maxWidth: '300px' }}>
           <label htmlFor="pay-tab-select" className="pay-dropdown-label">Filter Payments</label>
-          <select 
-            id="pay-tab-select" 
-            className="pay-tab-select"
+          <CustomDropdown 
+            size="sm"
             value={activeTab}
             onChange={(e) => setActiveTab(e.target.value)}
-          >
-            <option value="pending">
-              Pending Payments ({orders.filter(o => (o.paymentStatus || 'Pending') === 'Pending').length})
-            </option>
-            <option value="partial">
-              Partial Installments ({orders.filter(o => (o.paymentStatus || 'Pending') === 'Partial').length})
-            </option>
-            <option value="completed">
-              Completed Payments ({orders.filter(o => (o.paymentStatus || 'Pending') === 'Done').length})
-            </option>
-          </select>
+            options={[
+              { 
+                value: 'pending', 
+                label: `Pending Payments (${orders.filter(o => (o.paymentStatus || 'Pending') === 'Pending').length})` 
+              },
+              { 
+                value: 'partial', 
+                label: `Partial Installments (${orders.filter(o => (o.paymentStatus || 'Pending') === 'Partial').length})` 
+              },
+              { 
+                value: 'done', 
+                label: `Completed Payments (${orders.filter(o => (o.paymentStatus || 'Pending') === 'Done').length})` 
+              }
+            ]}
+          />
         </div>
 
         {/* Table View */}

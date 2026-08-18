@@ -19,6 +19,8 @@ import { collection, getDocs, query, orderBy, onSnapshot } from 'firebase/firest
 import { generateReceiptHTML } from '../../utils/printReceiptHelper';
 import logo from '../../assets/logo.png';
 import { usePrinter } from '../../context/PrinterContext';
+import CustomDropdown from '../../components/Common/CustomDropdown';
+import CustomDatePicker from '../../components/Common/CustomDatePicker';
 import './WalkInSales.css';
 
 const DEFAULT_ITEM_IMAGE = logo;
@@ -194,43 +196,39 @@ const WalkInSales = () => {
             />
           </div>
 
-          <select 
-            className="walkin-select-filter"
-            value={selectedStore}
-            onChange={(e) => setSelectedStore(e.target.value)}
-          >
-            <option value="all">🏬 All Outlets & Stores</option>
-            {stores.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+          <div style={{ width: '220px' }}>
+            <CustomDropdown 
+              size="sm"
+              value={selectedStore}
+              onChange={(e) => setSelectedStore(e.target.value)}
+              options={[
+                { value: 'all', label: '🏬 All Outlets & Stores' },
+                ...stores.map(s => ({ value: s.id, label: s.name }))
+              ]}
+            />
+          </div>
 
-          <select 
-            className="walkin-select-filter"
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-          >
-            <option value="all">⚡ All Statuses</option>
-            <option value="settled">✅ Settled & Paid</option>
-            <option value="saved">⏳ Saved / Parked</option>
-          </select>
+          <div style={{ width: '170px' }}>
+            <CustomDropdown 
+              size="sm"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              options={[
+                { value: 'all', label: '⚡ All Statuses' },
+                { value: 'settled', label: '✅ Settled & Paid' },
+                { value: 'saved', label: '⏳ Saved / Parked' }
+              ]}
+            />
+          </div>
 
-          <input 
-            type="date"
-            className="walkin-date-input"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-          />
-
-          {filterDate && (
-            <button 
-              className="polaris-btn polaris-btn-secondary"
-              style={{ height: '36px', padding: '0 10px', fontSize: '12px' }}
-              onClick={() => setFilterDate('')}
-            >
-              Clear Date
-            </button>
-          )}
+          <div style={{ width: '180px' }}>
+            <CustomDatePicker 
+              size="sm"
+              placeholder="Filter by date..."
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 

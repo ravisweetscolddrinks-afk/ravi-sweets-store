@@ -40,6 +40,7 @@ import {
 } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import CustomDatePicker from '../../components/Common/CustomDatePicker';
 import './EmployeeDetails.css';
 
 const EmployeeDetails = () => {
@@ -839,7 +840,10 @@ const EmployeeDetails = () => {
                   <input type="number" className="emp-text-input" placeholder="Enter amount" value={advFormData.amount} onChange={(e) => setAdvFormData({...advFormData, amount: e.target.value})} required />
                 </div>
                 <div className="emp-form-row">
-                  <div className="emp-input-group"><label className="emp-input-label">Date</label><input type="date" className="emp-text-input" value={advFormData.date} readOnly /></div>
+                  <div className="emp-input-group">
+                    <label className="emp-input-label">Date</label>
+                    <CustomDatePicker size="sm" value={advFormData.date} readOnly />
+                  </div>
                   <div className="emp-input-group"><label className="emp-input-label">Time</label><input type="text" className="emp-text-input" value={advFormData.time} readOnly /></div>
                 </div>
                 <div className="emp-input-group">
@@ -878,7 +882,10 @@ const EmployeeDetails = () => {
                   <input type="number" className="emp-text-input" placeholder="Enter amount" value={instFormData.amount} onChange={(e) => setInstFormData({...instFormData, amount: e.target.value})} required />
                 </div>
                 <div className="emp-form-row">
-                  <div className="emp-input-group"><label className="emp-input-label">Date</label><input type="date" className="emp-text-input" value={instFormData.date} readOnly /></div>
+                  <div className="emp-input-group">
+                    <label className="emp-input-label">Date</label>
+                    <CustomDatePicker size="sm" value={instFormData.date} readOnly />
+                  </div>
                   <div className="emp-input-group"><label className="emp-input-label">Time</label><input type="text" className="emp-text-input" value={instFormData.time} readOnly /></div>
                 </div>
                 <div className="modal-actions" style={{ marginTop: '10px' }}>
@@ -959,12 +966,10 @@ const EmployeeDetails = () => {
                 <div className="emp-form-row">
                   <div className="emp-input-group">
                     <label className="emp-input-label">Date</label>
-                    <input 
-                      type="date" 
-                      className="emp-text-input" 
+                    <CustomDatePicker 
+                      size="sm"
                       value={editAdvFormData.date} 
                       onChange={(e) => setEditAdvFormData({...editAdvFormData, date: e.target.value})} 
-                      required 
                     />
                   </div>
                   <div className="emp-input-group">

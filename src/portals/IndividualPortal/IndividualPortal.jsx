@@ -29,6 +29,7 @@ import {
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { printHTMLContent } from '../../context/PrinterContext';
+import CustomDropdown from '../../components/Common/CustomDropdown';
 import './IndividualPortal.css';
 
 const IndividualPortal = () => {
@@ -873,18 +874,24 @@ const IndividualPortal = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="ind-payslip-filters">
-                  <div className="filter-group">
+                <div className="ind-payslip-filters" style={{ display: 'flex', gap: '10px' }}>
+                  <div className="filter-group" style={{ width: '140px' }}>
                     <label>Select Month</label>
-                    <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}>
-                      {monthsList.map((m, idx) => <option key={idx} value={idx}>{m}</option>)}
-                    </select>
+                    <CustomDropdown 
+                      size="sm"
+                      value={selectedMonth} 
+                      onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                      options={monthsList.map((m, idx) => ({ value: idx, label: m }))}
+                    />
                   </div>
-                  <div className="filter-group">
+                  <div className="filter-group" style={{ width: '100px' }}>
                     <label>Select Year</label>
-                    <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
-                      {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
+                    <CustomDropdown 
+                      size="sm"
+                      value={selectedYear} 
+                      onChange={(e) => setSelectedYear(Number(e.target.value))}
+                      options={[2025, 2026, 2027].map(y => ({ value: y, label: String(y) }))}
+                    />
                   </div>
                 </div>
 

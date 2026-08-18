@@ -33,6 +33,8 @@ import {
 } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import CustomDropdown from '../../components/Common/CustomDropdown';
+import CustomDatePicker from '../../components/Common/CustomDatePicker';
 import './PUnitPortal.css';
 import { triggerWhatsAppOrderReady } from '../../utils/whatsapp';
 import { sendEventNotification } from '../../utils/notificationService';
@@ -1197,22 +1199,15 @@ const PUnitPortal = () => {
                     marginBottom: '20px'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <Calendar size={18} style={{ color: 'var(--primary-color)' }} />
                       <span style={{ fontSize: '13px', fontWeight: '700', color: '#334155' }}>Filter History by Date:</span>
-                      <input
-                        type="date"
-                        value={historyDate}
-                        onChange={(e) => setHistoryDate(e.target.value)}
-                        style={{
-                          padding: '6px 12px',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          outline: 'none',
-                          color: '#334155'
-                        }}
-                      />
+                      <div style={{ width: '180px' }}>
+                        <CustomDatePicker
+                          size="sm"
+                          placeholder="Select history date..."
+                          value={historyDate}
+                          onChange={(e) => setHistoryDate(e.target.value)}
+                        />
+                      </div>
                     </div>
                     {historyDate && (
                       <button
@@ -1252,27 +1247,15 @@ const PUnitPortal = () => {
                   {/* Store Filter */}
                   <div style={{ flex: '1 1 200px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569' }}>Filter by Store</label>
-                    <select
+                    <CustomDropdown
+                      size="sm"
                       value={storeFilter}
                       onChange={(e) => setStoreFilter(e.target.value)}
-                      style={{
-                        padding: '8px 12px',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '8px',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        color: '#334155',
-                        outline: 'none',
-                        background: '#fff',
-                        cursor: 'pointer',
-                        height: '38px'
-                      }}
-                    >
-                      <option value="All">All Stores</option>
-                      {uniqueStores.map(storeName => (
-                        <option key={storeName} value={storeName}>{storeName}</option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: 'all', label: 'All Stores' },
+                        ...stores.map(s => ({ value: s.id, label: s.name }))
+                      ]}
+                    />
                   </div>
 
                   {/* Order Search Filter */}

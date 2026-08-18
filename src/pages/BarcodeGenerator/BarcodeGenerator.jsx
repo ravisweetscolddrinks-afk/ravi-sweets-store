@@ -24,6 +24,7 @@ import JsBarcode from 'jsbarcode';
 import html2canvas from 'html2canvas';
 import toast from 'react-hot-toast';
 import { usePrinter } from '../../context/PrinterContext';
+import CustomDropdown from '../../components/Common/CustomDropdown';
 import './BarcodeGenerator.css';
 
 // Default store branding header
@@ -760,29 +761,44 @@ const BarcodeGenerator = () => {
           {/* 5. Collapsible Advanced Calibration */}
           {showCalibration && (
             <div className="fast-calibration-box">
-              <div className="calib-row">
+              <div className="calib-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
                 <div>
                   <label>Paper Layout:</label>
-                  <select value={labelColumns} onChange={(e) => setLabelColumns(Number(e.target.value))}>
-                    <option value={2}>2 Columns (2-Up Roll)</option>
-                    <option value={1}>1 Column (Single Roll)</option>
-                  </select>
+                  <CustomDropdown 
+                    size="sm"
+                    value={labelColumns} 
+                    onChange={(e) => setLabelColumns(Number(e.target.value))}
+                    options={[
+                      { value: 2, label: '2 Columns (2-Up Roll)' },
+                      { value: 1, label: '1 Column (Single Roll)' }
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label>Format:</label>
-                  <select value={barcodeFormatOption} onChange={(e) => setBarcodeFormatOption(e.target.value)}>
-                    <option value="asterisk">Delimited (1004*0400)</option>
-                    <option value="numeric">Numeric (10040400)</option>
-                  </select>
+                  <CustomDropdown 
+                    size="sm"
+                    value={barcodeFormatOption} 
+                    onChange={(e) => setBarcodeFormatOption(e.target.value)}
+                    options={[
+                      { value: 'asterisk', label: 'Delimited (1004*0400)' },
+                      { value: 'numeric', label: 'Numeric (10040400)' }
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label>Orientation:</label>
-                  <select value={labelDirection} onChange={(e) => setLabelDirection(Number(e.target.value))}>
-                    <option value={0}>0° Top-to-Bottom</option>
-                    <option value={1}>180° Inverted</option>
-                  </select>
+                  <CustomDropdown 
+                    size="sm"
+                    value={labelDirection} 
+                    onChange={(e) => setLabelDirection(Number(e.target.value))}
+                    options={[
+                      { value: 0, label: '0° Top-to-Bottom' },
+                      { value: 1, label: '180° Inverted' }
+                    ]}
+                  />
                 </div>
               </div>
             </div>

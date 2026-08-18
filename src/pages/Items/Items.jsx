@@ -39,6 +39,7 @@ import * as XLSX from 'xlsx';
 
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import CustomDropdown from '../../components/Common/CustomDropdown';
 import './Items.css';
 import logo from '../../assets/logo.png';
 
@@ -1068,17 +1069,18 @@ const Items = () => {
                       </p>
                       <div className="import-fallback-controls">
                         <label>Fallback Unit:</label>
-                        <select 
-                          value={fallbackMUnitId}
-                          onChange={(e) => setFallbackMUnitId(e.target.value)}
-                          className="items-select"
-                          style={{ maxWidth: '280px', height: '38px' }}
-                        >
-                          <option value="">-- Select Fallback --</option>
-                          {mUnits.map(mu => (
-                            <option key={mu.id} value={mu.id}>{mu.name}</option>
-                          ))}
-                        </select>
+                        <div style={{ maxWidth: '280px', width: '100%' }}>
+                          <CustomDropdown 
+                            size="sm"
+                            value={fallbackMUnitId}
+                            placeholder="-- Select Fallback --"
+                            onChange={(e) => setFallbackMUnitId(e.target.value)}
+                            options={[
+                              { value: '', label: '-- Select Fallback --' },
+                              ...mUnits.map(mu => ({ value: mu.id, label: mu.name }))
+                            ]}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}

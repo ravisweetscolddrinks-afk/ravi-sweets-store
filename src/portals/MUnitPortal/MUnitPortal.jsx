@@ -18,6 +18,7 @@ import { db } from '../../config/firebase';
 import { collection, onSnapshot, query, doc, updateDoc, getDocs, where, orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import CustomDatePicker from '../../components/Common/CustomDatePicker';
 import './MUnitPortal.css';
 import { triggerWhatsAppOrderReady } from '../../utils/whatsapp';
 import { sendEventNotification } from '../../utils/notificationService';
@@ -503,12 +504,10 @@ const MUnitPortal = () => {
 
                   {/* Worksheet Date Selector */}
                   <div className="mu-date-filter-bar">
-                    <div className="mu-filter-left">
-                      <Calendar size={18} className="mu-filter-cal-icon" />
-                      <span className="mu-filter-label">Filter Worksheet Date:</span>
-                      <input
-                        type="date"
-                        className="mu-date-picker-input"
+                    <div className="mu-filter-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '250px' }}>
+                      <span className="mu-filter-label" style={{ whiteSpace: 'nowrap' }}>Worksheet Date:</span>
+                      <CustomDatePicker
+                        size="sm"
                         value={worksheetDate}
                         onChange={(e) => setWorksheetDate(e.target.value)}
                       />
@@ -1282,12 +1281,10 @@ const MUnitPortal = () => {
                   </div>
 
                   <div className="mu-date-filter-bar">
-                    <div className="mu-filter-left">
-                      <Calendar size={18} className="mu-filter-cal-icon" />
-                      <span className="mu-filter-label">Worksheet Date:</span>
-                      <input
-                        type="date"
-                        className="mu-date-picker-input"
+                    <div className="mu-filter-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '250px' }}>
+                      <span className="mu-filter-label" style={{ whiteSpace: 'nowrap' }}>Worksheet Date:</span>
+                      <CustomDatePicker
+                        size="sm"
                         value={mUnitWorksheetDate}
                         onChange={(e) => setMUnitWorksheetDate(e.target.value)}
                       />

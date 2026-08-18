@@ -43,6 +43,8 @@ import {
 } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import CustomDropdown from '../../components/Common/CustomDropdown';
+import CustomDatePicker from '../../components/Common/CustomDatePicker';
 import './Inventory.css';
 
 const CATEGORIES_LIST = [
@@ -745,20 +747,16 @@ const Inventory = () => {
               </p>
             </div>
 
-            <div className="analysis-unit-quick-actions">
-              <select 
-                className="inventory-select-filter"
+            <div className="analysis-unit-quick-actions" style={{ minWidth: '240px' }}>
+              <CustomDropdown 
+                size="sm"
                 value={selectedMUnit}
                 onChange={(e) => setSelectedMUnit(e.target.value)}
-                style={{ background: '#ffffff', color: 'var(--text-primary)', fontWeight: 600 }}
-              >
-                <option value="ALL">🏭 All Manufacturing Units</option>
-                {mUnits.map(unit => (
-                  <option key={unit.id} value={unit.id}>
-                    📍 {unit.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: 'ALL', label: '🏭 All Manufacturing Units' },
+                  ...mUnits.map(unit => ({ value: unit.id, label: `📍 ${unit.name}` }))
+                ]}
+              />
             </div>
           </div>
 
@@ -819,16 +817,17 @@ const Inventory = () => {
                 />
               </div>
 
-              <select 
-                className="inventory-select-filter"
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-              >
-                <option value="ALL">All Categories</option>
-                {CATEGORIES_LIST.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
+              <div style={{ width: '180px' }}>
+                <CustomDropdown 
+                  size="sm"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  options={[
+                    { value: 'ALL', label: 'All Categories' },
+                    ...CATEGORIES_LIST.map(cat => ({ value: cat, label: cat }))
+                  ]}
+                />
+              </div>
             </div>
           </div>
 
@@ -1001,27 +1000,31 @@ const Inventory = () => {
                 />
               </div>
 
-              <select 
-                className="inventory-select-filter"
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-              >
-                <option value="ALL">All Categories</option>
-                {CATEGORIES_LIST.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
+              <div style={{ width: '170px' }}>
+                <CustomDropdown 
+                  size="sm"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  options={[
+                    { value: 'ALL', label: 'All Categories' },
+                    ...CATEGORIES_LIST.map(cat => ({ value: cat, label: cat }))
+                  ]}
+                />
+              </div>
 
-              <select 
-                className="inventory-select-filter"
-                value={stockStatusFilter}
-                onChange={(e) => setStockStatusFilter(e.target.value)}
-              >
-                <option value="ALL">All Stock Status</option>
-                <option value="NORMAL">In Stock</option>
-                <option value="LOW">Low Stock</option>
-                <option value="OUT">Out of Stock</option>
-              </select>
+              <div style={{ width: '170px' }}>
+                <CustomDropdown 
+                  size="sm"
+                  value={stockStatusFilter}
+                  onChange={(e) => setStockStatusFilter(e.target.value)}
+                  options={[
+                    { value: 'ALL', label: 'All Stock Status' },
+                    { value: 'NORMAL', label: 'In Stock' },
+                    { value: 'LOW', label: 'Low Stock' },
+                    { value: 'OUT', label: 'Out of Stock' }
+                  ]}
+                />
+              </div>
             </div>
 
             <button className="inventory-action-btn" onClick={handleOpenAddStockItem}>
@@ -1306,28 +1309,20 @@ const Inventory = () => {
                   <div className="inventory-form-grid">
                     <div className="inventory-form-group">
                       <label>Category <span>*</span></label>
-                      <select
-                        className="inventory-form-select"
+                      <CustomDropdown
                         value={itemForm.category}
                         onChange={(e) => setItemForm(prev => ({ ...prev, category: e.target.value }))}
-                      >
-                        {CATEGORIES_LIST.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
+                        options={CATEGORIES_LIST.map(cat => ({ value: cat, label: cat }))}
+                      />
                     </div>
 
                     <div className="inventory-form-group">
                       <label>Measurement Unit <span>*</span></label>
-                      <select
-                        className="inventory-form-select"
+                      <CustomDropdown
                         value={itemForm.unit}
                         onChange={(e) => setItemForm(prev => ({ ...prev, unit: e.target.value }))}
-                      >
-                        {UNITS_LIST.map(u => (
-                          <option key={u} value={u}>{u}</option>
-                        ))}
-                      </select>
+                        options={UNITS_LIST.map(u => ({ value: u, label: u }))}
+                      />
                     </div>
                   </div>
 
@@ -1372,16 +1367,15 @@ const Inventory = () => {
 
                     <div className="inventory-form-group">
                       <label>Preferred Vendor (Optional)</label>
-                      <select
-                        className="inventory-form-select"
+                      <CustomDropdown
                         value={itemForm.vendorId}
+                        placeholder="-- None / Multiple Suppliers --"
                         onChange={(e) => setItemForm(prev => ({ ...prev, vendorId: e.target.value }))}
-                      >
-                        <option value="">-- None / Multiple Suppliers --</option>
-                        {vendors.map(v => (
-                          <option key={v.id} value={v.id}>{v.name}</option>
-                        ))}
-                      </select>
+                        options={[
+                          { value: '', label: '-- None / Multiple Suppliers --' },
+                          ...vendors.map(v => ({ value: v.id, label: v.name }))
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1436,22 +1430,20 @@ const Inventory = () => {
                   <div className="inventory-form-grid">
                     <div className="inventory-form-group">
                       <label>Select Finished Sweet / Product <span>*</span></label>
-                      <select
-                        required
-                        className="inventory-form-select"
+                      <CustomDropdown
+                        placeholder="-- Choose Product from Catalog --"
                         value={recipeForm.itemId}
                         onChange={(e) => setRecipeForm(prev => ({ ...prev, itemId: e.target.value }))}
-                      >
-                        <option value="">-- Choose Product from Catalog --</option>
-                        {finishedItems.map(item => (
-                          <option key={item.id} value={item.id}>{item.name}</option>
-                        ))}
-                      </select>
+                        options={[
+                          { value: '', label: '-- Choose Product from Catalog --' },
+                          ...finishedItems.map(item => ({ value: item.id, label: item.name }))
+                        ]}
+                      />
                     </div>
 
                     <div className="inventory-form-group">
                       <label>Recipe Yield / Batch Size</label>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <input
                           type="number"
                           step="any"
@@ -1461,16 +1453,17 @@ const Inventory = () => {
                           value={recipeForm.yieldQuantity}
                           onChange={(e) => setRecipeForm(prev => ({ ...prev, yieldQuantity: e.target.value }))}
                         />
-                        <select
-                          className="inventory-form-select"
-                          style={{ width: '100px' }}
-                          value={recipeForm.yieldUnit}
-                          onChange={(e) => setRecipeForm(prev => ({ ...prev, yieldUnit: e.target.value }))}
-                        >
-                          <option value="kg">kg</option>
-                          <option value="grams">grams</option>
-                          <option value="pieces">pieces</option>
-                        </select>
+                        <div style={{ width: '120px' }}>
+                          <CustomDropdown
+                            value={recipeForm.yieldUnit}
+                            onChange={(e) => setRecipeForm(prev => ({ ...prev, yieldUnit: e.target.value }))}
+                            options={[
+                              { value: 'kg', label: 'kg' },
+                              { value: 'grams', label: 'grams' },
+                              { value: 'pieces', label: 'pieces' }
+                            ]}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1491,19 +1484,20 @@ const Inventory = () => {
 
                     {recipeForm.ingredients.map((ing, idx) => (
                       <div key={idx} className="ingredient-row-item">
-                        <select
-                          required
-                          className="inventory-form-select"
-                          value={ing.stockItemId}
-                          onChange={(e) => handleIngredientChange(idx, 'stockItemId', e.target.value)}
-                        >
-                          <option value="">-- Select Raw Material --</option>
-                          {stockItems.map(s => (
-                            <option key={s.id} value={s.id}>
-                              {s.name} ({s.unit || 'kg'})
-                            </option>
-                          ))}
-                        </select>
+                        <div style={{ flex: 2, minWidth: '180px' }}>
+                          <CustomDropdown
+                            placeholder="-- Select Raw Material --"
+                            value={ing.stockItemId}
+                            onChange={(e) => handleIngredientChange(idx, 'stockItemId', e.target.value)}
+                            options={[
+                              { value: '', label: '-- Select Raw Material --' },
+                              ...stockItems.map(s => ({
+                                value: s.id,
+                                label: `${s.name} (${s.unit || 'kg'})`
+                              }))
+                            ]}
+                          />
+                        </div>
 
                         <input
                           type="number"
@@ -1511,19 +1505,18 @@ const Inventory = () => {
                           required
                           placeholder="Quantity (kg)"
                           className="inventory-form-input"
+                          style={{ flex: 1, minWidth: '100px' }}
                           value={ing.quantity}
                           onChange={(e) => handleIngredientChange(idx, 'quantity', e.target.value)}
                         />
 
-                        <select
-                          className="inventory-form-select"
-                          value={ing.unit}
-                          onChange={(e) => handleIngredientChange(idx, 'unit', e.target.value)}
-                        >
-                          {UNITS_LIST.map(u => (
-                            <option key={u} value={u}>{u}</option>
-                          ))}
-                        </select>
+                        <div style={{ width: '110px' }}>
+                          <CustomDropdown
+                            value={ing.unit}
+                            onChange={(e) => handleIngredientChange(idx, 'unit', e.target.value)}
+                            options={UNITS_LIST.map(u => ({ value: u, label: u }))}
+                          />
+                        </div>
 
                         <button 
                           type="button" 
@@ -1598,34 +1591,31 @@ const Inventory = () => {
                 <div className="inventory-modal-body">
                   <div className="inventory-form-group">
                     <label>Select Raw Material Stock Item <span>*</span></label>
-                    <select
-                      required
-                      className="inventory-form-select"
+                    <CustomDropdown
+                      placeholder="-- Choose Stock Item --"
                       value={assignForm.stockItemId}
                       onChange={(e) => setAssignForm(prev => ({ ...prev, stockItemId: e.target.value }))}
-                    >
-                      <option value="">-- Choose Stock Item --</option>
-                      {stockItems.map(s => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} (Available in Central Stock: {s.currentStock || 0} {s.unit || 'kg'})
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: '-- Choose Stock Item --' },
+                        ...stockItems.map(s => ({
+                          value: s.id,
+                          label: `${s.name} (Available: ${s.currentStock || 0} ${s.unit || 'kg'})`
+                        }))
+                      ]}
+                    />
                   </div>
 
                   <div className="inventory-form-group">
                     <label>Select Target Manufacturing Unit <span>*</span></label>
-                    <select
-                      required
-                      className="inventory-form-select"
+                    <CustomDropdown
+                      placeholder="-- Choose Manufacturing Unit --"
                       value={assignForm.mUnitId}
                       onChange={(e) => setAssignForm(prev => ({ ...prev, mUnitId: e.target.value }))}
-                    >
-                      <option value="">-- Choose Manufacturing Unit --</option>
-                      {mUnits.map(unit => (
-                        <option key={unit.id} value={unit.id}>{unit.name}</option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: '-- Choose Manufacturing Unit --' },
+                        ...mUnits.map(unit => ({ value: unit.id, label: unit.name }))
+                      ]}
+                    />
                   </div>
 
                   <div className="inventory-form-group">
@@ -1702,33 +1692,31 @@ const Inventory = () => {
                 <div className="inventory-modal-body">
                   <div className="inventory-form-group">
                     <label>Stock Item Consumed <span>*</span></label>
-                    <select
-                      required
-                      className="inventory-form-select"
+                    <CustomDropdown
+                      placeholder="-- Choose Stock Item --"
                       value={usageForm.stockItemId}
                       onChange={(e) => setUsageForm(prev => ({ ...prev, stockItemId: e.target.value }))}
-                    >
-                      <option value="">-- Choose Stock Item --</option>
-                      {stockItems.map(s => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} (Assigned: {s.assignedStock || 0}, On-Hand: {s.currentStock || 0} {s.unit || 'kg'})
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: '-- Choose Stock Item --' },
+                        ...stockItems.map(s => ({
+                          value: s.id,
+                          label: `${s.name} (Assigned: ${s.assignedStock || 0}, On-Hand: ${s.currentStock || 0} ${s.unit || 'kg'})`
+                        }))
+                      ]}
+                    />
                   </div>
 
                   <div className="inventory-form-group">
                     <label>Production Unit (Optional)</label>
-                    <select
-                      className="inventory-form-select"
+                    <CustomDropdown
+                      placeholder="-- Central Store / General --"
                       value={usageForm.mUnitId}
                       onChange={(e) => setUsageForm(prev => ({ ...prev, mUnitId: e.target.value }))}
-                    >
-                      <option value="">-- Central Store / General --</option>
-                      {mUnits.map(unit => (
-                        <option key={unit.id} value={unit.id}>{unit.name}</option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: '', label: '-- Central Store / General --' },
+                        ...mUnits.map(unit => ({ value: unit.id, label: unit.name }))
+                      ]}
+                    />
                   </div>
 
                   <div className="inventory-form-group">

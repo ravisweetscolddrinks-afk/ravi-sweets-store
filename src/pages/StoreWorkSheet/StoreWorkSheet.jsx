@@ -28,6 +28,7 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import Loader from '../../components/Loader/Loader';
+import CustomDatePicker from '../../components/Common/CustomDatePicker';
 import './StoreWorkSheet.css';
 
 
@@ -590,17 +591,13 @@ const StoreWorkSheet = () => {
         {activeTab === 'active' ? (
           <>
             <div className="ws-filters-row">
-              <div className="ws-date-picker-group">
+              <div className="ws-date-picker-group" style={{ width: '220px' }}>
                 <label>Allocation Date</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Calendar size={18} color="var(--primary-color)" />
-                  <input
-                    type="date"
-                    className="ws-date-input"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                  />
-                </div>
+                <CustomDatePicker
+                  size="sm"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
               </div>
 
               <div className="ws-search-group">

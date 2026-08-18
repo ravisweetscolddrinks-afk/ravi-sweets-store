@@ -25,6 +25,7 @@ import {
 } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import CustomDropdown from '../../components/Common/CustomDropdown';
 import './Dashboard.css';
 
 // Logo for invoice preview fallback
@@ -258,19 +259,17 @@ const Dashboard = () => {
         </div>
         
         <div className="polaris-header-actions">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--polaris-text-subdued)' }}>Outlet Store:</span>
-            <select 
-              className="input-compact"
-              style={{ height: '34px', fontSize: '13px', width: 'auto' }}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '220px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--polaris-text-subdued)', whiteSpace: 'nowrap' }}>Outlet:</span>
+            <CustomDropdown 
+              size="sm"
               value={selectedStoreFilter}
               onChange={(e) => setSelectedStoreFilter(e.target.value)}
-            >
-              <option value="All">All Outlets & Stores</option>
-              {stores.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+              options={[
+                { value: 'All', label: '🏬 All Outlets & Stores' },
+                ...stores.map(s => ({ value: s.id, label: s.name }))
+              ]}
+            />
           </div>
         </div>
       </div>

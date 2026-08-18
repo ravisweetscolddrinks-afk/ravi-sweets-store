@@ -29,6 +29,7 @@ import { db } from '../../config/firebase';
 
 import { collection, addDoc, getDocs, doc, updateDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import CustomDropdown from '../../components/Common/CustomDropdown';
 import logo from '../../assets/logo.png';
 import './SuperAdminPOS.css';
 
@@ -447,13 +448,14 @@ const SuperAdminPOS = () => {
         </div>
 
         {/* Store Selector */}
-        <div className="sa-store-selector-box">
+        <div className="sa-store-selector-box" style={{ minWidth: '220px' }}>
           <label>Active Store Outlet:</label>
-          <select className="sa-store-select" value={selectedStoreId} onChange={handleStoreChange}>
-            {stores.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+          <CustomDropdown 
+            size="sm"
+            value={selectedStoreId} 
+            onChange={handleStoreChange}
+            options={stores.map(s => ({ value: s.id, label: s.name }))}
+          />
         </div>
       </div>
 

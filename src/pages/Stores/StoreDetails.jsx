@@ -48,6 +48,7 @@ import {
 } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import CustomDropdown from '../../components/Common/CustomDropdown';
 import './StoreDetails.css';
 import { triggerWhatsAppOrderReady } from '../../utils/whatsapp';
 import { usePrinter } from '../../context/PrinterContext';
@@ -677,20 +678,21 @@ const StoreDetails = () => {
                                       <td style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{item.description || '-'}</td>
                                       <td>{item.unit === 'Weight' ? `${item.quantity} kg` : `${item.quantity} pcs`}</td>
                                       <td style={{ fontWeight: '700' }}>₹{item.total.toFixed(2)}</td>
-                                      <td>
-                                        <select 
-                                          className="ord-item-status-select"
+                                      <td style={{ minWidth: '180px' }}>
+                                        <CustomDropdown 
+                                          size="sm"
                                           value={item.status || 'preparation_started'}
                                           onChange={(e) => updateItemStatus(order.id, idx, e.target.value)}
-                                        >
-                                          <option value="preparation_started">Preparation Started</option>
-                                          <option value="preparation_complete">Preparation Complete</option>
-                                          <option value="moved_to_packing">Moved to Packing</option>
-                                          <option value="packing_complete">Packing Complete</option>
-                                          <option value="moved_to_store">Moved to Store</option>
-                                          <option value="received_at_store">Received at Store</option>
-                                          <option value="delivered">Delivered</option>
-                                        </select>
+                                          options={[
+                                            { value: 'preparation_started', label: 'Preparation Started' },
+                                            { value: 'preparation_complete', label: 'Preparation Complete' },
+                                            { value: 'moved_to_packing', label: 'Moved to Packing' },
+                                            { value: 'packing_complete', label: 'Packing Complete' },
+                                            { value: 'moved_to_store', label: 'Moved to Store' },
+                                            { value: 'received_at_store', label: 'Received at Store' },
+                                            { value: 'delivered', label: 'Delivered' }
+                                          ]}
+                                        />
                                       </td>
                                     </tr>
                                   ))}
