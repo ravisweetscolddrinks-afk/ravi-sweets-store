@@ -47,10 +47,20 @@ export const requestNotificationPermission = async () => {
     // Wait for service worker to be ready
     const registration = await navigator.serviceWorker.ready;
 
-    const token = await getToken(messaging, {
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: registration
-    });
+    let token = null;
+    try {
+      token = await getToken(messaging, {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: registration
+      });
+    } catch (tokenErr) {
+      if (tokenErr?.message?.includes('missing required authentication credential') || tokenErr?.code === 'messaging/token-subscribe-failed') {
+        console.warn('⚠️ FCM Web Push Registration 401: VAPID Key in .env may be invalid or not matched with Firebase Project. FCM Push will be disabled until valid VAPID Key is configured in Firebase Console.');
+      } else {
+        console.warn('⚠️ FCM Token error:', tokenErr.message);
+      }
+      return null;
+    }
 
     if (token) {
       console.log('✅ FCM Token obtained:', token.substring(0, 20) + '...');
@@ -60,8 +70,8 @@ export const requestNotificationPermission = async () => {
       return null;
     }
   } catch (err) {
-    // Don't throw — silently fail so notification issues don't break the app
-    console.error('FCM token request error:', err);
+    // Silently fail so notification issues never break the application UI
+    console.warn('Notification initialization bypassed:', err.message);
     return null;
   }
 };

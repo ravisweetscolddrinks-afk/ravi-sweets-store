@@ -19,7 +19,8 @@ import {
   ShoppingBag,
   Bluetooth,
   Usb,
-  RefreshCw
+  RefreshCw,
+  Calendar
 } from 'lucide-react';
 
 import { usePrinter } from '../../context/PrinterContext';
@@ -30,6 +31,7 @@ import { db } from '../../config/firebase';
 import { collection, addDoc, getDocs, doc, updateDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import CustomDropdown from '../../components/Common/CustomDropdown';
+import CustomDatePicker from '../../components/Common/CustomDatePicker';
 import logo from '../../assets/logo.png';
 import './SuperAdminPOS.css';
 
@@ -79,6 +81,7 @@ const SuperAdminPOS = () => {
   const [posDiscount, setPosDiscount] = useState('');
   const [discountType, setDiscountType] = useState('percent'); // 'percent' (%) or 'amount' (₹)
   const [paymentMode, setPaymentMode] = useState('Cash'); // 'UPI', 'Cash', 'Card'
+  const [billDate, setBillDate] = useState(() => new Date().toISOString().split('T')[0]); // Default to today 'YYYY-MM-DD'
 
   const [submittingBill, setSubmittingBill] = useState(false);
   const [editingBillId, setEditingBillId] = useState(null);
@@ -342,6 +345,14 @@ const SuperAdminPOS = () => {
       const selectedStoreObj = stores.find(s => s.id === selectedStoreId);
       const billId = editingBillId ? (savedBillsList.find(b => b.id === editingBillId)?.billId || generateBillId()) : generateBillId();
 
+      const now = new Date();
+      let billDateObj = new Date();
+      if (billDate) {
+        const [bYear, bMonth, bDay] = billDate.split('-').map(Number);
+        billDateObj = new Date(bYear, bMonth - 1, bDay, now.getHours(), now.getMinutes(), now.getSeconds());
+      }
+      const formattedDate = billDateObj.toLocaleDateString('en-IN');
+
       const billData = {
         billId,
         storeId: selectedStoreId,
@@ -364,8 +375,9 @@ const SuperAdminPOS = () => {
         totalAmount: totalAmt,
         paymentMode,
         status: billStatus, // 'settled' or 'saved'
-        date: new Date().toLocaleDateString('en-IN'),
-        createdAt: serverTimestamp(),
+        date: formattedDate,
+        billDate: billDate || new Date().toISOString().split('T')[0],
+        createdAt: editingBillId ? (savedBillsList.find(b => b.id === editingBillId)?.createdAt || billDateObj) : billDateObj,
         updatedAt: serverTimestamp()
       };
 
@@ -389,6 +401,7 @@ const SuperAdminPOS = () => {
       setPosDiscount('');
       setEditingBillId(null);
       setSelectedCustomerId('');
+      setBillDate(new Date().toISOString().split('T')[0]);
     } catch (err) {
       console.error("Save/Settle Bill Error:", err);
       toast.error("Failed to process bill");
@@ -413,6 +426,9 @@ const SuperAdminPOS = () => {
     setCart(bill.items || []);
     setPosDiscount(bill.discount ? bill.discount.toString() : '');
     setPaymentMode(bill.paymentMode || 'Cash');
+    if (bill.billDate) {
+      setBillDate(bill.billDate);
+    }
     setActiveTab('pos');
     toast.success(`Loaded saved bill #${bill.billId}! You can now modify and settle it.`);
   };
@@ -447,15 +463,30 @@ const SuperAdminPOS = () => {
           </div>
         </div>
 
-        {/* Store Selector */}
-        <div className="sa-store-selector-box" style={{ minWidth: '220px' }}>
-          <label>Active Store Outlet:</label>
-          <CustomDropdown 
-            size="sm"
-            value={selectedStoreId} 
-            onChange={handleStoreChange}
-            options={stores.map(s => ({ value: s.id, label: s.name }))}
-          />
+        {/* Store Selector & Billing Date */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div className="sa-store-selector-box" style={{ minWidth: '220px' }}>
+            <label>Active Store Outlet:</label>
+            <CustomDropdown 
+              size="sm"
+              value={selectedStoreId} 
+              onChange={handleStoreChange}
+              options={stores.map(s => ({ value: s.id, label: s.name }))}
+            />
+          </div>
+
+          <div className="sa-store-selector-box" style={{ minWidth: '180px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Calendar size={12} color="var(--primary-color)" /> Billing Date:
+            </label>
+            <CustomDatePicker 
+              size="sm"
+              value={billDate} 
+              onChange={(e) => setBillDate(e.target.value || new Date().toISOString().split('T')[0])}
+              clearable={false}
+              align="right"
+            />
+          </div>
         </div>
       </div>
 

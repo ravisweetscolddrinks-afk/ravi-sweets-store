@@ -751,6 +751,7 @@ const StorePortal = () => {
   // Billing & POS State
   const [billingSubTab, setBillingSubTab] = useState('pos'); // 'pos' or 'bills'
   const [billsFilterDate, setBillsFilterDate] = useState(new Date().toISOString().split('T')[0]); // defaults to today's date YYYY-MM-DD
+  const [posBillDate, setPosBillDate] = useState(() => new Date().toISOString().split('T')[0]); // default to today's date YYYY-MM-DD
   const [storeItems, setStoreItems] = useState([]);
   const [bills, setBills] = useState([]);
   const [cart, setCart] = useState([]);
@@ -2157,6 +2158,13 @@ const StorePortal = () => {
       const discountVal = discountType === 'percent' ? (cartTotal * rawDiscount) / 100 : rawDiscount;
       const totalAmt = Math.max(0, cartTotal - discountVal);
 
+      const now = new Date();
+      let billDateObj = new Date();
+      if (posBillDate) {
+        const [bYear, bMonth, bDay] = posBillDate.split('-').map(Number);
+        billDateObj = new Date(bYear, bMonth - 1, bDay, now.getHours(), now.getMinutes(), now.getSeconds());
+      }
+      const formattedDate = billDateObj.toLocaleDateString('en-IN');
 
       const billData = {
         billId,
@@ -2179,8 +2187,10 @@ const StorePortal = () => {
         totalAmount: totalAmt,
         paymentMode,
         status: 'settled',
-        createdAt: serverTimestamp(),
-        date: new Date().toLocaleDateString('en-IN')
+        createdAt: billDateObj,
+        updatedAt: serverTimestamp(),
+        date: formattedDate,
+        billDate: posBillDate || new Date().toISOString().split('T')[0]
       };
       
       const docRef = await addDoc(collection(db, 'bills'), billData);
@@ -2190,6 +2200,7 @@ const StorePortal = () => {
       setCart([]);
       setPosDiscount('');
       setSelectedCustomerId('');
+      setPosBillDate(new Date().toISOString().split('T')[0]);
       setSelectedReceiptBill(billData);
       
       // Auto-print receipt via USB/Bluetooth thermal printer or system dialog
@@ -2235,6 +2246,8 @@ const StorePortal = () => {
 
   // Filter bills by the selected date input (defaults to today's date YYYY-MM-DD)
   const filteredBills = bills.filter(bill => {
+    if (!billsFilterDate) return true;
+    if (bill.billDate && bill.billDate === billsFilterDate) return true;
     const formattedBillDate = bill.date || (bill.createdAt?.toDate ? bill.createdAt.toDate().toLocaleDateString() : '');
     return isSameDay(formattedBillDate, billsFilterDate);
   });
@@ -3218,24 +3231,42 @@ const StorePortal = () => {
           <div className="st-billing-view">
             
             {/* View Header with Sub Navigation Tabs */}
-            <div className="st-view-header" style={{ marginBottom: '20px' }}>
+            <div className="st-view-header" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h2>Billing & POS Terminal</h2>
                 <p className="st-view-desc">Settle walk-in bills and view past store invoice records</p>
               </div>
-              <div className="st-sub-tabs">
-                <button 
-                  className={`st-sub-tab-btn ${billingSubTab === 'pos' ? 'active' : ''}`}
-                  onClick={() => setBillingSubTab('pos')}
-                >
-                  <CreditCard size={16} /> POS Terminal
-                </button>
-                <button 
-                  className={`st-sub-tab-btn ${billingSubTab === 'bills' ? 'active' : ''}`}
-                  onClick={() => setBillingSubTab('bills')}
-                >
-                  <Receipt size={16} /> Bills History
-                </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                {billingSubTab === 'pos' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '180px' }}>
+                    <label style={{ fontSize: '11.5px', fontWeight: '700', color: 'var(--text-secondary)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Calendar size={13} color="var(--primary-color)" /> Billing Date:
+                    </label>
+                    <div style={{ width: '150px' }}>
+                      <CommonDatePicker 
+                        size="sm"
+                        value={posBillDate} 
+                        onChange={(e) => setPosBillDate(e.target.value || new Date().toISOString().split('T')[0])}
+                        clearable={false}
+                        align="right"
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="st-sub-tabs">
+                  <button 
+                    className={`st-sub-tab-btn ${billingSubTab === 'pos' ? 'active' : ''}`}
+                    onClick={() => setBillingSubTab('pos')}
+                  >
+                    <CreditCard size={16} /> POS Terminal
+                  </button>
+                  <button 
+                    className={`st-sub-tab-btn ${billingSubTab === 'bills' ? 'active' : ''}`}
+                    onClick={() => setBillingSubTab('bills')}
+                  >
+                    <Receipt size={16} /> Bills History
+                  </button>
+                </div>
               </div>
             </div>
 

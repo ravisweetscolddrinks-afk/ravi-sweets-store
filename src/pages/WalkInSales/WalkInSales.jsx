@@ -106,7 +106,11 @@ const WalkInSales = () => {
 
     const matchesStore = selectedStore === 'all' || bill.storeId === selectedStore;
     const matchesStatus = selectedStatus === 'all' || (bill.status || 'settled') === selectedStatus;
-    const matchesDate = !filterDate || bill.date === new Date(filterDate).toLocaleDateString('en-IN') || (bill.date || '').includes(filterDate);
+    const matchesDate = !filterDate || 
+      bill.billDate === filterDate ||
+      bill.date === new Date(filterDate).toLocaleDateString('en-IN') || 
+      (bill.date || '').includes(filterDate) ||
+      (bill.createdAt?.toDate ? bill.createdAt.toDate().toISOString().split('T')[0] === filterDate : false);
 
     return matchesSearch && matchesStore && matchesStatus && matchesDate;
   });
