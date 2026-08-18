@@ -42,7 +42,7 @@ export const NotificationProvider = ({ children }) => {
         // 2. Find the Firestore user document matching this user
         let userDocId = null;
 
-        if (currentUser?.email === 'admin@ravisweets.com') {
+        if (currentUser?.email === 'admin@rajusweets.com') {
           const snap = await getDocs(
             query(
               collection(db, 'users'),

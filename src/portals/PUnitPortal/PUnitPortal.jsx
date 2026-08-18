@@ -50,7 +50,15 @@ const PUnitPortal = () => {
     qzConnected,
     selectedQZPrinter,
     printRawBLE,
-    printRawUSB
+    printRawUSB,
+    printHTMLContent,
+    handleBluetoothConnect,
+    disconnectPrinter,
+    connectQZTray,
+    qzConnecting,
+    qzConnectTimer,
+    setShowQZModal,
+    disconnectQZTray
   } = usePrinter();
 
   const getPrinterWidthParams = () => {
@@ -327,7 +335,7 @@ const PUnitPortal = () => {
         bytes.push(...INIT);
         bytes.push(...CENTER);
         bytes.push(...DOUBLE_SIZE);
-        bytes.push(...encoder.encode("RAVI SWEETS\n"));
+        bytes.push(...encoder.encode("RAJU GHEE SWEETS\n"));
         bytes.push(...NORMAL_SIZE);
         bytes.push(...encoder.encode("Quality Sweets & Savouries\n"));
         bytes.push(...encoder.encode(separator));
@@ -440,7 +448,7 @@ const PUnitPortal = () => {
 
         bytes.push(...CENTER);
         bytes.push(...DOUBLE_SIZE);
-        bytes.push(...encoder.encode("RAVI SWEETS\n"));
+        bytes.push(...encoder.encode("RAJU GHEE SWEETS\n"));
         bytes.push(...NORMAL_SIZE);
         bytes.push(...encoder.encode("Quality Sweets & Savouries\n"));
         bytes.push(...encoder.encode(separator));
@@ -663,7 +671,7 @@ const PUnitPortal = () => {
 
         return `
                 <div class="slip">
-                  <div class="title">Ravi Sweets</div>
+                  <div class="title">Raju Ghee Sweets</div>
                   <div class="subtitle">Quality Sweets & Savouries</div>
                   
                   <div class="box-header">BOX ${box.boxNum} OF ${boxesList.length}</div>
@@ -717,14 +725,7 @@ const PUnitPortal = () => {
         </html>
       `;
 
-      const printWindow = window.open('', '_blank', 'width=600,height=800');
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 500);
+      printHTMLContent(printContent);
     });
   };
 
@@ -1053,6 +1054,55 @@ const PUnitPortal = () => {
                   </span>
                 </div>
 
+                {/* Printer Connection Banner */}
+                <div className="pu-bt-banner animate-fade-in" style={{ marginBottom: '20px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                    {/* Bluetooth Status */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: bluetoothConnected ? '#22c55e' : '#cbd5e1', boxShadow: bluetoothConnected ? '0 0 8px #22c55e' : 'none', flexShrink: 0 }}></div>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b' }}>
+                        BT: {bluetoothConnected ? connectedDevice : 'Not Connected'}
+                      </span>
+                    </div>
+                    {/* Divider */}
+                    <div style={{ width: '1px', height: '20px', background: '#e2e8f0' }}></div>
+                    {/* QZ USB Status */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: qzConnected ? '#3b82f6' : '#cbd5e1', boxShadow: qzConnected ? '0 0 8px #3b82f6' : 'none', flexShrink: 0 }}></div>
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b' }}>
+                        USB: {qzConnected ? (selectedQZPrinter || 'No printer selected') : 'Not Connected'}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {/* BT Button */}
+                    {bluetoothConnected ? (
+                      <button type="button" onClick={disconnectPrinter}
+                        style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Bluetooth size={12} /> Disconnect BT
+                      </button>
+                    ) : (
+                      <button type="button" onClick={handleBluetoothConnect}
+                        style={{ background: 'var(--primary-color)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Bluetooth size={12} /> Connect BT
+                      </button>
+                    )}
+                    {/* QZ USB Button */}
+                    {qzConnected ? (
+                      <button type="button" onClick={() => setShowQZModal(true)}
+                        style={{ background: '#2563eb', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Usb size={12} /> Change USB Printer
+                      </button>
+                    ) : (
+                      <button type="button" onClick={connectQZTray} disabled={qzConnecting}
+                        style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '700', cursor: qzConnecting ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '4px', opacity: qzConnecting ? 0.7 : 1 }}>
+                        {qzConnecting ? <RefreshCw size={12} className="spin-icon" /> : <Usb size={12} />}
+                        {qzConnecting ? 'Connecting...' : 'Connect USB'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {/* Sub-Tabs Selector for Active Packing Orders */}
                 {tab === 'orders' && (
                   <div style={{
@@ -1100,7 +1150,8 @@ const PUnitPortal = () => {
                         transition: 'all 0.2s',
                         border: 'none',
                         background: packingSubTab === 'completed' ? 'white' : 'transparent',
-                        color: packingSubTab === 'completed' ? '#7c3aed' : '#64748b',
+                        color: packingSubTab === 'completed' ? 'var(--primary-color)' : '#64748b',
+
                         boxShadow: packingSubTab === 'completed' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
                         outline: 'none'
                       }}
@@ -1344,7 +1395,7 @@ const PUnitPortal = () => {
                               }}>
                                 🏪 {order.storeName || 'Outlet Store'}
                               </span>
-                              {order.globalDescription && (
+                              {(order.globalDescription || order.pUnitDescription || order.imageUrl) && (
                                 <div style={{
                                   marginTop: '6px',
                                   padding: '6px 10px',
@@ -1355,12 +1406,30 @@ const PUnitPortal = () => {
                                   fontWeight: '600',
                                   color: '#92400e',
                                   display: 'flex',
-                                  alignItems: 'flex-start',
-                                  gap: '6px',
+                                  flexDirection: 'column',
+                                  gap: '4px',
                                   lineHeight: '1.4'
                                 }}>
-                                  <span style={{ flexShrink: 0 }}>📝</span>
-                                  <span><strong>Order Note:</strong> {order.globalDescription}</span>
+                                  {order.globalDescription && (
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                                      <span style={{ flexShrink: 0 }}>📝</span>
+                                      <span><strong>Order Note:</strong> {order.globalDescription}</span>
+                                    </div>
+                                  )}
+                                  {order.pUnitDescription && (
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                                      <span style={{ flexShrink: 0 }}>📦</span>
+                                      <span><strong>Pack Note:</strong> {order.pUnitDescription}</span>
+                                    </div>
+                                  )}
+                                  {order.imageUrl && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                                      <span>📷 <strong>Order Image:</strong></span>
+                                      <a href={order.imageUrl} target="_blank" rel="noopener noreferrer">
+                                        <img src={order.imageUrl} alt="Order reference" style={{ width: '45px', height: '45px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                      </a>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

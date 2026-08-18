@@ -1,4 +1,5 @@
 import logo from '../assets/logo.png';
+import { printHTMLContent } from '../context/PrinterContext';
 
 /**
  * Converts a number to its Indian Rupee word representation.
@@ -126,7 +127,7 @@ export function getInvoiceHtml(order) {
   }
 
   // Retrieve store/seller details
-  const storeName = order.storeName || 'Ravi Sweets';
+  const storeName = order.storeName || 'Raju Ghee Sweets';
   const sellerGSTIN = '37AEQPK1348P1ZS'; // Official GSTIN
 
   const tableHeadersHtml = isIntrastate
@@ -373,7 +374,7 @@ export function getInvoiceHtml(order) {
             <tr>
               <td>
                 <img src="${logo}" alt="Logo" class="logo" /><br/>
-                <strong style="font-size: 16px; color: #0c4a24;">RAVI SWEETS</strong><br/>
+                <strong style="font-size: 16px; color: #0c4a24;">RAJU GHEE SWEETS</strong><br/>
                 <span>Store: ${storeName}</span><br/>
                 <span>Andhra Pradesh, India</span><br/>
                 <strong>GSTIN: ${sellerGSTIN}</strong>
@@ -401,7 +402,7 @@ export function getInvoiceHtml(order) {
             <tbody>
               <tr>
                 <td>
-                  <strong>RAVI SWEETS</strong><br/>
+                  <strong>RAJU GHEE SWEETS</strong><br/>
                   Store Location: ${storeName}<br/>
                   Andhra Pradesh, India<br/>
                   GSTIN: <strong>${sellerGSTIN}</strong><br/>
@@ -444,7 +445,7 @@ export function getInvoiceHtml(order) {
                 <div style="margin-top: 12px; border-top: 1px dashed #ddd; padding-top: 8px;">
                   <strong style="color: #0c4a24;">Bank Details for Payment:</strong><br/>
                   <strong>Bank Name:</strong> HDFC Bank<br/>
-                  <strong>Account Name:</strong> RAVI SWEETS<br/>
+                  <strong>Account Name:</strong> RAJU GHEE SWEETS<br/>
                   <strong>Account Number:</strong> 50200046843751<br/>
                   <strong>IFSC Code:</strong> HDFC0009088<br/>
                   <strong>Branch:</strong> Satyanayanapuram, vijayawada
@@ -488,7 +489,7 @@ export function getInvoiceHtml(order) {
             </div>
             <div style="float: right; width: 40%; text-align: right;">
               <div class="signature-box">
-                <span style="font-size: 10px; color: #555;">for Ravi Sweets</span><br/><br/><br/>
+                <span style="font-size: 10px; color: #555;">for Raju Ghee Sweets</span><br/><br/><br/>
                 <strong>Authorized Signatory</strong>
               </div>
             </div>
@@ -501,14 +502,5 @@ export function getInvoiceHtml(order) {
 
 export function generateGSTInvoice(order) {
   const printContent = getInvoiceHtml(order);
-  const printWindow = window.open('', '_blank', 'width=900,height=800');
-  if (printWindow) {
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.onload = function() {
-      printWindow.focus();
-      printWindow.print();
-    };
-  }
+  printHTMLContent(printContent);
 }

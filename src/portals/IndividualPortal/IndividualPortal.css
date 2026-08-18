@@ -3,8 +3,8 @@
    ========================================================================== */
 
 :root {
-  --ind-primary: #a855f7;
-  --ind-primary-light: #f3e8ff;
+  --ind-primary: #0A2A1B;
+  --ind-primary-light: #e6f4ea;
   --ind-success-bg: #d1fae5;
   --ind-success-text: #065f46;
   --ind-warning-bg: #fef3c7;
@@ -18,10 +18,13 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
+  background: var(--polaris-bg-canvas, #f1f2f4);
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
+
 
 /* Loader and Error States */
 .ind-loader-container,

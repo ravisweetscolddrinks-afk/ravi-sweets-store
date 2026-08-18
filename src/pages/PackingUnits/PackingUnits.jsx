@@ -124,21 +124,27 @@ const PackingUnits = () => {
   );
 
   return (
-    <div className="pu-container">
-      <div className="pu-header">
-        <div className="pu-header-info">
-          <h1>Packing Units</h1>
-          <p>Manage your packaging centers and distribution hubs</p>
+    <div className="polaris-page-container">
+      {/* Polaris Header Bar */}
+      <div className="polaris-header-bar">
+        <div className="polaris-page-title-group">
+          <div className="polaris-page-title-icon">
+            <Package size={24} />
+          </div>
+          <h1 className="polaris-page-title">Packing Units</h1>
         </div>
         {!showAddForm && (
-          <button className="pu-add-btn" onClick={() => setShowAddForm(true)}>
-            <Plus size={20} /> Add Unit
-          </button>
+          <div className="polaris-header-actions">
+            <button className="polaris-btn polaris-btn-primary" onClick={() => setShowAddForm(true)}>
+              <Plus size={16} /> Add unit
+            </button>
+          </div>
         )}
       </div>
 
       <div className="pu-content-layout">
         <div className={`pu-list-section ${showAddForm ? 'shrink' : 'full'}`}>
+
           <div className="pu-search-bar">
             <Search size={18} className="pu-search-icon" />
             <input 

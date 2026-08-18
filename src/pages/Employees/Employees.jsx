@@ -15,9 +15,11 @@ import {
   Calendar,
   Eye,
   Edit2,
-  AlertTriangle,
-  IndianRupee
+  UserCircle,
+  IndianRupee,
+  AlertTriangle
 } from 'lucide-react';
+
 import { db } from '../../config/firebase';
 import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
@@ -163,18 +165,24 @@ const Employees = () => {
   });
 
   return (
-    <div className="emp-container">
-      <div className="emp-header">
-        <div>
-          <h1 className="emp-title">Employee Management</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>
-            {employees.length} Total Employees
-          </p>
+    <div className="polaris-page-container">
+      {/* Polaris Header Bar */}
+      <div className="polaris-header-bar">
+        <div className="polaris-page-title-group">
+          <div className="polaris-page-title-icon">
+            <UserCircle size={24} />
+          </div>
+          <h1 className="polaris-page-title">Employees</h1>
         </div>
-        <button className="emp-add-btn" onClick={() => setIsFormOpen(!isFormOpen)}>
-          {isFormOpen ? <><X size={18} /> Close Form</> : <><UserPlus size={18} /> Add Employee</>}
-        </button>
+        <div className="polaris-header-actions">
+          <button className="polaris-btn polaris-btn-primary" onClick={() => setIsFormOpen(true)}>
+            <Plus size={16} /> Add employee
+          </button>
+        </div>
       </div>
+
+
+
 
       <div className="emp-layout">
         <div className="emp-list-section">

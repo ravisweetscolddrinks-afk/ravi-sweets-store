@@ -20,12 +20,12 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Background FCM message received:', payload);
 
-  const notificationTitle = payload.notification?.title || '🔔 Ravi Sweets';
+  const notificationTitle = payload.notification?.title || '🔔 Raju Ghee Sweets';
   const notificationOptions = {
     body: payload.notification?.body || 'You have a new update',
     icon: '/logo.png',
     badge: '/logo.png',
-    tag: payload.data?.tag || `ravi-sweets-${Date.now()}`,
+    tag: payload.data?.tag || `raju-sweets-${Date.now()}`,
     requireInteraction: true,
     actions: [
       { action: 'open', title: '👀 Open App' }
@@ -62,7 +62,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // ─── PWA Cache Strategy ───────────────────────────────────────────────────────
-const CACHE_NAME = 'ravi-sweets-cache-v1';
+const CACHE_NAME = 'raju-sweets-cache-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -99,13 +99,13 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - Network first strategy for dynamic assets, falling back to cache
 self.addEventListener('fetch', (event) => {
-  // Skip non-HTTP(S) schemes (e.g. chrome-extension://), POST/PUT/DELETE, and Firebase API requests
+  // Skip non-http, dynamic firebase/database or POST/PUT/DELETE requests
   if (
     event.request.method !== 'GET' ||
     !event.request.url.startsWith('http') ||
+    event.request.url.includes('chrome-extension') ||
     event.request.url.includes('firestore.googleapis.com') ||
-    event.request.url.includes('firebase') ||
-    event.request.url.includes('fcmregistrations.googleapis.com')
+    event.request.url.includes('firebase')
   ) {
     return;
   }

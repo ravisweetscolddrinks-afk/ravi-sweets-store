@@ -11,7 +11,8 @@ import {
   Smartphone,
   Trash2,
   Edit,
-  User
+  User,
+  Barcode
 } from 'lucide-react';
 import { db } from '../../config/firebase';
 import { 
@@ -51,6 +52,7 @@ const Users = () => {
   const [submitting, setSubmitting] = useState(false);
   const [employeeAccess, setEmployeeAccess] = useState(false);
   const [individualAccess, setIndividualAccess] = useState(false);
+  const [barcodeAccess, setBarcodeAccess] = useState(false);
 
   useEffect(() => {
     // Fetch users
@@ -84,6 +86,7 @@ const Users = () => {
     setSelectedPUnits([]);
     setEmployeeAccess(false);
     setIndividualAccess(false);
+    setBarcodeAccess(false);
     setEditingId(null);
   };
 
@@ -111,7 +114,8 @@ const Users = () => {
           mUnits: selectedMUnits,
           pUnits: selectedPUnits,
           employees: employeeAccess,
-          individual: individualAccess
+          individual: individualAccess,
+          barcodeGenerator: barcodeAccess
         },
         updatedAt: serverTimestamp()
       };
@@ -143,6 +147,7 @@ const Users = () => {
     setSelectedPUnits(user.access?.pUnits || []);
     setEmployeeAccess(user.access?.employees || false);
     setIndividualAccess(user.access?.individual || false);
+    setBarcodeAccess(user.access?.barcodeGenerator || false);
     setEditingId(user.id);
     setShowAddModal(true);
   };
@@ -164,16 +169,22 @@ const Users = () => {
   );
 
   return (
-    <div className="usrm-container">
-      <div className="usrm-header">
-        <div className="usrm-header-info">
-          <h1>Users & Roles</h1>
-          <p>Manage staff access to Stores, Manufacturing, and Packing units</p>
+    <div className="polaris-page-container">
+      {/* Polaris Header Bar */}
+      <div className="polaris-header-bar">
+        <div className="polaris-page-title-group">
+          <div className="polaris-page-title-icon">
+            <UserCog size={24} />
+          </div>
+          <h1 className="polaris-page-title">Users & Roles</h1>
         </div>
-        <button className="usrm-add-btn" onClick={() => { resetForm(); setShowAddModal(true); }}>
-          <Plus size={20} /> Add User
-        </button>
+        <div className="polaris-header-actions">
+          <button className="polaris-btn polaris-btn-primary" onClick={() => { resetForm(); setShowAddModal(true); }}>
+            <Plus size={16} /> Add user
+          </button>
+        </div>
       </div>
+
 
       <div className="usrm-list-card">
         <div className="usrm-search-bar">
@@ -221,9 +232,10 @@ const Users = () => {
                   <td><span className="usrm-access-badge">{user.access?.pUnits?.length || 0} Units</span></td>
                   <td>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                      {user.access?.barcodeGenerator && <span className="usrm-access-badge" style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>Barcode Generator</span>}
                       {user.access?.employees && <span className="usrm-access-badge" style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe' }}>Staff Directory</span>}
                       {user.access?.individual && <span className="usrm-access-badge" style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd' }}>My Profile</span>}
-                      {!user.access?.employees && !user.access?.individual && <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>None</span>}
+                      {!user.access?.barcodeGenerator && !user.access?.employees && !user.access?.individual && <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>None</span>}
                     </div>
                   </td>
                   <td>
@@ -344,6 +356,25 @@ const Users = () => {
                             <span>{unit.name}</span>
                           </label>
                         )) : <div className="no-data">No packing units</div>}
+                      </div>
+                    </div>
+
+                    {/* Barcode Generator Access */}
+                    <div className="usrm-access-card" style={{ background: '#ecfdf5', border: '1.5px dashed #34d399' }}>
+                      <div className="usrm-acard-header" style={{ background: '#d1fae5', color: '#065f46' }}>
+                        <Barcode size={18} />
+                        <h4>Barcode Generator</h4>
+                      </div>
+                      <div className="usrm-acard-list" style={{ padding: '15px' }}>
+                        <label className="usrm-checkbox-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={barcodeAccess}
+                            onChange={() => setBarcodeAccess(!barcodeAccess)}
+                            style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '12px', fontWeight: '600', color: '#047857' }}>Allow generating barcodes & weight sticker printing</span>
+                        </label>
                       </div>
                     </div>
 

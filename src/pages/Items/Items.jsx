@@ -16,8 +16,10 @@ import {
   AlertCircle,
   CheckCircle2,
   FileSpreadsheet,
-  Info
+  Info,
+  Barcode
 } from 'lucide-react';
+
 import { db } from '../../config/firebase';
 import { 
   collection, 
@@ -128,7 +130,8 @@ const Items = () => {
 
   const [formData, setFormData] = useState({
     name: '',
-    unit: 'Weight', // 'Weight', 'Piece', 'Litre', or 'Packet'
+    barcode: '',
+    unit: 'Weight', // 'Weight' or 'Piece'
     price: '',
     mUnitId: '',
     categoryId: '',
@@ -231,6 +234,7 @@ const Items = () => {
       const { image, ...restData } = formData;
       const finalData = {
         ...restData,
+        barcode: (formData.barcode || '').trim(),
         price: Number(formData.price),
         image: finalImageUrl,
         updatedAt: serverTimestamp()
@@ -257,7 +261,7 @@ const Items = () => {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', unit: 'Weight', price: '', mUnitId: '', categoryId: '', image: '', showInWorksheet: true });
+    setFormData({ name: '', barcode: '', unit: 'Weight', price: '', mUnitId: '', categoryId: '', image: '', showInWorksheet: true });
     setImageFile(null);
     setShowAddForm(false);
     setEditingItem(null);
@@ -267,6 +271,7 @@ const Items = () => {
     setEditingItem(item);
     setFormData({
       name: item.name,
+      barcode: item.barcode || item.barcodeId || '',
       unit: item.unit,
       price: item.price,
       mUnitId: item.mUnitId,
@@ -276,6 +281,7 @@ const Items = () => {
     });
     setShowAddForm(true);
   };
+
 
   const handleDelete = async () => {
     if (!showDeleteModal) return;
@@ -379,10 +385,6 @@ const Items = () => {
           let unit = 'Weight';
           if (rawUnit.includes('pc') || rawUnit.includes('piece') || rawUnit.includes('qty') || rawUnit.includes('count')) {
             unit = 'Piece';
-          } else if (rawUnit.includes('litre') || rawUnit.includes('liter') || rawUnit.includes('ltr') || rawUnit === 'l' || rawUnit.includes('ml')) {
-            unit = 'Litre';
-          } else if (rawUnit.includes('packet') || rawUnit.includes('pkt') || rawUnit.includes('pack')) {
-            unit = 'Packet';
           }
 
           const rawMUnit = String(row[mUnitIdx] || '').trim();
@@ -442,12 +444,11 @@ const Items = () => {
 
   const downloadTemplate = () => {
     try {
-      const headers = ['Name', 'Price (INR)', 'Unit Type (Weight / Piece / Litre / Packet)', 'Manufacturing Unit', 'Category (Optional)'];
+      const headers = ['Name', 'Price (INR)', 'Unit Type (Weight / Piece)', 'Manufacturing Unit', 'Category (Optional)'];
       const examples = [
         ['Special Ghee Mysore Pak', '650', 'Weight', mUnits[0]?.name || 'Main Kitchen', categories[0]?.name || 'Sweets'],
-        ['Fresh Cow Milk', '60', 'Litre', mUnits[0]?.name || 'Main Kitchen', categories[0]?.name || 'Dairy'],
-        ['Special Kara Boondi', '50', 'Piece', mUnits[1]?.name || mUnits[0]?.name || 'Savories Kitchen', categories[1]?.name || 'Snacks'],
-        ['Badam Milk Packet', '30', 'Packet', mUnits[0]?.name || 'Main Kitchen', categories[0]?.name || 'Drinks']
+        ['Kaju Katli', '900', 'Weight', mUnits[0]?.name || 'Main Kitchen', categories[0]?.name || 'Sweets'],
+        ['Special Kara Boondi', '50', 'Piece', mUnits[1]?.name || mUnits[0]?.name || 'Savories Kitchen', categories[1]?.name || 'Snacks']
       ];
 
       let csvContent = headers.join(',') + '\n';
@@ -463,7 +464,7 @@ const Items = () => {
       csvContent += '--- HELP & DIRECTIONS ---\n';
       csvContent += `"Available Manufacturing Units (Match exactly): ${mUnits.map(mu => mu.name).join(' | ')}"\n`;
       csvContent += `"Available Categories (Match exactly): ${categories.map(cat => cat.name).join(' | ')}"\n`;
-      csvContent += 'Unit Type must be one of: Weight (default), Piece, Litre, or Packet\n';
+      csvContent += 'Unit Type must be either: Weight (default) or Piece\n';
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -594,100 +595,185 @@ const Items = () => {
     setShowImportModal(false);
   };
 
-  const filteredItems = items.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredItems = items.filter(item => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const nameMatch = (item.name || '').toLowerCase().includes(q);
+    const barcodeMatch = (item.barcode || item.barcodeId || '').toLowerCase().includes(q);
+    const priceMatch = String(item.price || '').includes(q);
+    return nameMatch || barcodeMatch || priceMatch;
+  });
 
   return (
-    <div className="items-container">
-      <div className="items-header">
-        <div className="items-header-info">
-          <h1>Product Inventory</h1>
-          <p>Manage sweets, snacks, and store essentials</p>
+    <div className="polaris-page-container">
+      {/* Polaris Header Bar */}
+      <div className="polaris-header-bar">
+        <div className="polaris-page-title-group">
+          <div className="polaris-page-title-icon">
+            <Package size={24} />
+          </div>
+          <h1 className="polaris-page-title">Products</h1>
         </div>
         {!showAddForm && (
-          <div className="items-header-actions">
-            <button className="items-import-btn" onClick={() => setShowImportModal(true)}>
-              <Upload size={18} /> Bulk Import
+          <div className="polaris-header-actions">
+            <button className="polaris-btn polaris-btn-secondary" onClick={downloadTemplate}>
+              <Download size={14} /> Export
             </button>
-            <button className="items-add-btn" onClick={() => setShowAddForm(true)}>
-              <Plus size={20} /> Add New Item
+            <button className="polaris-btn polaris-btn-secondary" onClick={() => setShowImportModal(true)}>
+              <Upload size={14} /> Import
+            </button>
+            <button className="polaris-btn polaris-btn-primary" onClick={() => setShowAddForm(true)}>
+              <Plus size={16} /> Add product
             </button>
           </div>
         )}
       </div>
 
+      {/* Polaris Top Metrics Summary Card */}
+      <div className="polaris-metrics-card">
+        <div className="polaris-metric-item">
+          <div className="polaris-metric-label">Total Products</div>
+          <div className="polaris-metric-value">{items.length}</div>
+          <div className="polaris-metric-subtext">Active catalog items</div>
+        </div>
+        <div className="polaris-metric-item">
+          <div className="polaris-metric-label">Categories</div>
+          <div className="polaris-metric-value">{categories.length}</div>
+          <div className="polaris-metric-subtext">Assigned product groups</div>
+        </div>
+        <div className="polaris-metric-item">
+          <div className="polaris-metric-label">Manufacturing Units</div>
+          <div className="polaris-metric-value">{mUnits.length}</div>
+          <div className="polaris-metric-subtext">Kitchens & factories</div>
+        </div>
+        <div className="polaris-metric-item">
+          <div className="polaris-metric-label">Average Price</div>
+          <div className="polaris-metric-value">
+            ₹{items.length > 0 ? (items.reduce((acc, curr) => acc + (Number(curr.price) || 0), 0) / items.length).toFixed(0) : '0'}
+          </div>
+          <div className="polaris-metric-subtext">Per unit price</div>
+        </div>
+      </div>
+
       <div className="items-content-layout">
         <div className={`items-list-section ${showAddForm ? 'shrink' : 'full'}`}>
-          <div className="items-search-bar">
-            <Search size={18} className="items-search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="items-grid">
-            {loading ? (
-              <div className="items-loader-container"><div className="loader"></div></div>
-            ) : filteredItems.length > 0 ? (
-              filteredItems.map(item => (
-                <div key={item.id} className="item-card">
-                  <div className="item-img-box">
-                    <img 
-                      src={(!item.image || typeof item.image !== 'string' || item.image.trim() === "" || item.image.toLowerCase() === "none" || item.image.toLowerCase() === "null" || item.image.includes('unsplash')) ? DEFAULT_ITEM_IMAGE : item.image} 
-                      alt={item.name} 
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = DEFAULT_ITEM_IMAGE;
-                      }}
-                    />
-                    <div className="item-card-actions">
-                      <button onClick={() => handleEdit(item)} className="item-mini-btn edit"><Edit size={14} /></button>
-                      <button onClick={() => setShowDeleteModal(item.id)} className="item-mini-btn delete"><Trash2 size={14} /></button>
-                    </div>
-                  </div>
-                  <div className="item-card-info">
-                    <div className="item-meta-top">
-                      <span className="item-unit-tag">{item.unit}</span>
-                      <span className="item-price-tag">₹{item.price}</span>
-                    </div>
-                    <h3>{item.name}</h3>
-                    <div className="item-munit-info">
-                      <Factory size={12} />
-                      <span>{mUnits.find(mu => mu.id === item.mUnitId)?.name || 'Unknown Unit'}</span>
-                    </div>
-                    <div className="item-card-cat-tag">
-                      <Tag size={12} />
-                      <span>{categories.find(cat => cat.id === item.categoryId)?.name || 'Uncategorized'}</span>
-                    </div>
-                    <div className="item-worksheet-toggle" style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>Show in Worksheet</span>
-                      <label className="switch">
-                        <input 
-                          type="checkbox" 
-                          checked={item.showInWorksheet !== false} 
-                          onChange={(e) => handleToggleWorksheetVisibility(item, e.target.checked)}
-                        />
-                        <span className="slider round"></span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="items-empty-state">
-                <div className="empty-icon-circle">
-                  <Package size={32} />
-                </div>
-                <h3>No Items Found</h3>
-                <p>You haven't added any items yet. Click the button above to start building your inventory.</p>
+          {/* Polaris Card Panel containing Table */}
+          <div className="polaris-card">
+            {/* Filter Toolbar */}
+            <div className="polaris-table-toolbar">
+              <div className="polaris-table-search">
+                <Search size={14} style={{ color: 'var(--polaris-text-subdued)' }} />
+                <input 
+                  type="text" 
+                  placeholder="Search by name, barcode ID, price..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-            )}
+            </div>
+
+            {/* Polaris Data Table */}
+            <div className="polaris-table-wrapper">
+              {loading ? (
+                <div className="items-loader-container" style={{ padding: '40px', textAlign: 'center' }}>
+                  <div className="loader"></div>
+                </div>
+              ) : filteredItems.length > 0 ? (
+                <table className="polaris-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px' }}><input type="checkbox" /></th>
+                      <th>Product</th>
+                      <th>Barcode ID</th>
+                      <th>Status</th>
+                      <th>Unit Type</th>
+                      <th>Price</th>
+                      <th>Category</th>
+                      <th>Kitchen / Unit</th>
+                      <th>Worksheet</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredItems.map(item => {
+                      const catName = categories.find(cat => cat.id === item.categoryId)?.name || 'Uncategorized';
+                      const mUnitName = mUnits.find(mu => mu.id === item.mUnitId)?.name || 'Main Kitchen';
+                      const imgSrc = (!item.image || typeof item.image !== 'string' || item.image.trim() === "" || item.image.toLowerCase() === "none" || item.image.toLowerCase() === "null" || item.image.includes('unsplash')) ? DEFAULT_ITEM_IMAGE : item.image;
+                      const barcodeVal = item.barcode || item.barcodeId || '';
+
+                      return (
+                        <tr key={item.id}>
+                          <td><input type="checkbox" /></td>
+                          <td>
+                            <div className="polaris-item-cell">
+                              <img 
+                                src={imgSrc} 
+                                alt={item.name} 
+                                className="polaris-item-img"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = DEFAULT_ITEM_IMAGE;
+                                }}
+                              />
+                              <div className="polaris-item-title">{item.name}</div>
+                            </div>
+                          </td>
+                          <td>
+                            {barcodeVal ? (
+                              <span className="polaris-badge" style={{ fontFamily: 'monospace', fontWeight: '700', fontSize: '11px', letterSpacing: '0.5px', background: '#f1f2f4', border: '1px solid #d1d5db', color: '#374151' }}>
+                                {barcodeVal}
+                              </span>
+                            ) : (
+                              <span style={{ color: '#9ca3af', fontSize: '12px' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            <span className="polaris-badge polaris-badge-active">Active</span>
+                          </td>
+                          <td>
+                            <span className="polaris-in-stock">{item.unit}</span>
+                          </td>
+                          <td style={{ fontWeight: '700' }}>₹{item.price}</td>
+                          <td style={{ color: 'var(--polaris-text-subdued)' }}>{catName}</td>
+                          <td style={{ color: 'var(--polaris-text-subdued)' }}>{mUnitName}</td>
+                          <td>
+                            <label className="switch" style={{ transform: 'scale(0.8)' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={item.showInWorksheet !== false} 
+                                onChange={(e) => handleToggleWorksheetVisibility(item, e.target.checked)}
+                              />
+                              <span className="slider round"></span>
+                            </label>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                              <button onClick={() => handleEdit(item)} className="polaris-btn polaris-btn-secondary" style={{ height: '28px', padding: '0 8px' }}>
+                                <Edit size={12} />
+                              </button>
+                              <button onClick={() => setShowDeleteModal(item.id)} className="polaris-btn polaris-btn-secondary" style={{ height: '28px', padding: '0 8px', color: '#dc2626' }}>
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="items-empty-state" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                  <div className="empty-icon-circle" style={{ margin: '0 auto 16px' }}>
+                    <Package size={32} />
+                  </div>
+                  <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '4px' }}>No Products Found</h3>
+                  <p style={{ color: 'var(--polaris-text-subdued)', fontSize: '13px' }}>Try adjusting your search query or add a new product.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+
 
         <AnimatePresence>
           {showAddForm && (
@@ -721,7 +807,7 @@ const Items = () => {
                 </div>
 
                 <div className="items-input-group">
-                  <label>Item Name</label>
+                  <label>Item Name *</label>
                   <input 
                     type="text" 
                     name="name" 
@@ -732,14 +818,26 @@ const Items = () => {
                   />
                 </div>
 
+                <div className="items-input-group">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Barcode size={15} style={{ color: 'var(--primary-color)' }} /> Barcode ID / SKU Code
+                  </label>
+                  <input 
+                    type="text" 
+                    name="barcode" 
+                    value={formData.barcode}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 890123456789 or ITEM-101 (used in billing & POS)"
+                  />
+                </div>
+
+
                 <div className="items-form-row">
                   <CustomSelect
                     label="Unit Type"
                     options={[
                       { value: 'Weight', label: 'Weight (kg/gm)' },
-                      { value: 'Piece', label: 'Piece (qty)' },
-                      { value: 'Litre', label: 'Litre (L/ml)' },
-                      { value: 'Packet', label: 'Packet (pkt)' }
+                      { value: 'Piece', label: 'Piece (qty)' }
                     ]}
                     value={formData.unit}
                     onChange={(val) => setFormData(prev => ({ ...prev, unit: val }))}

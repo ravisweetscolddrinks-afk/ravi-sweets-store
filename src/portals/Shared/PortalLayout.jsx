@@ -4,8 +4,11 @@ import {
   LogOut, Home, Star,
   Bluetooth as BluetoothIcon, 
   Usb as UsbIcon, 
-  RefreshCw, AlertCircle, X, Menu
+  RefreshCw, RotateCw, AlertCircle, X, Menu,
+  Search, Eye, Bell
 } from 'lucide-react';
+
+
 import { auth, db } from '../../config/firebase';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -118,105 +121,148 @@ const PortalLayout = ({ children, title, links }) => {
   };
 
   return (
-    <div className={`layout-wrapper ${isSidebarOpen ? 'sidebar-open' : ''}`}>
-      <aside className={`sidebar ${isSidebarOpen ? 'drawer-open' : ''}`}>
-        <div className="sidebar-header-mobile">
-          <span className="sidebar-mobile-title">Menu</span>
-          <button className="sidebar-close-btn" onClick={closeSidebar} aria-label="Close menu">
-            <X size={20} />
-          </button>
-        </div>
-        <div className="sidebar-menu">
-          {links.map(link => (
-            <Link 
-              key={link.path} 
-              to={link.path} 
-              onClick={closeSidebar}
-              className={`sidebar-item ${location.pathname.startsWith(link.path) ? 'active' : ''}`}
-            >
-              {React.cloneElement(link.icon, { size: 24, className: 'sidebar-icon' })}
-              <span className="sidebar-label">{link.label}</span>
-            </Link>
-          ))}
-        </div>
-        <div className="sidebar-footer">
+    <div className={`portal-layout-wrapper ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+      {/* 1. Full-Width Top Header Spanning 100% Viewport */}
+      <header className="portal-header">
+        <div className="portal-header-left">
           <button 
-            onClick={() => { closeSidebar(); navigate('/onboarding'); }} 
-            className="sidebar-switch-btn" 
-            title="Switch Portal"
+            className="portal-header-menu-btn" 
+            onClick={toggleSidebar}
+            aria-label="Toggle Navigation Sidebar"
           >
-            <Home size={24} />
-            <span className="sidebar-label">Switch Portal</span>
+            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <button 
-            onClick={() => { closeSidebar(); handleLogout(); }} 
-            className="sidebar-logout-btn" 
-            title="Logout"
-          >
-            <LogOut size={24} />
-            <span className="sidebar-label">Logout</span>
-          </button>
+          <Link to="/onboarding" className="portal-header-logo">
+            <img src={logo} alt="Raju Ghee Sweets" className="portal-header-logo-img" />
+            <span className="portal-header-brand-title">Raju Ghee Sweets</span>
+          </Link>
+          <span className="portal-header-season-tag">
+            {entityRole.includes('Store') ? 'v2.0 Store' : entityRole.includes('Manufacturing') ? 'v2.0 Kitchen' : entityRole.includes('Packing') ? 'v2.0 Packing' : 'v2.0 Staff'}
+          </span>
         </div>
-      </aside>
 
-      {isSidebarOpen && (
-        <div className="sidebar-overlay" onClick={closeSidebar}></div>
-      )}
+        {/* Polaris Floating Center Search Bar */}
+        <div className="portal-header-search-container">
+          <Search size={14} className="portal-header-search-icon" />
+          <input 
+            type="text" 
+            placeholder="Search items, orders, stores..." 
+            className="portal-header-search-input"
+          />
+          <span className="portal-header-search-shortcut">
+            <kbd>CTRL</kbd> <kbd>K</kbd>
+          </span>
+        </div>
 
-      <div className="layout-main">
-        <header className="header">
-          <div className="header-left">
-            <button 
-              className="header-menu-btn" 
-              onClick={toggleSidebar}
-              aria-label="Toggle Navigation Sidebar"
-            >
-              {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+        <div className="portal-header-right">
+          {/* Reload Page Button */}
+          <button 
+            className="portal-header-icon-btn" 
+            title="Reload Page" 
+            onClick={() => window.location.reload()}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <RotateCw size={16} />
+          </button>
+
+
+          {/* Notifications Bell */}
+          <button className="portal-header-icon-btn" title="Notifications">
+            <Bell size={16} />
+            <span className="portal-header-notif-badge">4</span>
+          </button>
+
+          {/* Printer Connection Chips */}
+          <div className="header-printer-status-bar">
+            {bluetoothConnected ? (
+              <button className="header-print-status-btn connected ble" title={`BLE: ${connectedDevice}`} onClick={disconnectPrinter}>
+                <BluetoothIcon size={13} />
+                <span>BLE: {connectedDevice ? (connectedDevice.length > 8 ? `${connectedDevice.substring(0, 8)}...` : connectedDevice) : 'Connected'}</span>
+              </button>
+            ) : (
+              <button className="header-print-status-btn disconnected ble" title="Connect Bluetooth Printer" onClick={handleBluetoothConnect}>
+                <BluetoothIcon size={13} />
+                <span>BLE</span>
+              </button>
+            )}
+
+            {qzConnected ? (
+              <button className="header-print-status-btn connected usb" title={`USB: ${selectedQZPrinter}`} onClick={() => setShowQZModal(true)}>
+                <UsbIcon size={13} />
+                <span>USB: {selectedQZPrinter ? (selectedQZPrinter.length > 8 ? `${selectedQZPrinter.substring(0, 8)}...` : selectedQZPrinter) : 'Connected'}</span>
+              </button>
+            ) : (
+              <button className="header-print-status-btn disconnected usb" title="Connect USB Printer" onClick={connectQZTray} disabled={qzConnecting}>
+                <UsbIcon size={13} />
+                <span>{qzConnecting ? `USB: ${qzConnectTimer}s` : 'USB'}</span>
+              </button>
+            )}
+          </div>
+
+          {/* User Profile Switcher Badge */}
+          <div className="portal-header-store-badge">
+            <div className="portal-header-avatar">RG</div>
+            <span className="portal-header-store-name">{entityName ? entityName : entityRole}</span>
+          </div>
+        </div>
+      </header>
+
+      {/* 2. Side-By-Side Layout Body (230px Left Sidebar + Main Content Canvas) */}
+      <div className="portal-layout-body">
+        <aside className={`portal-sidebar ${isSidebarOpen ? 'drawer-open' : ''}`}>
+          <div className="portal-sidebar-header-mobile">
+            <span className="portal-sidebar-mobile-title">Navigation</span>
+            <button className="portal-sidebar-close-btn" onClick={closeSidebar} aria-label="Close menu">
+              <X size={18} />
             </button>
-            <Link to="/onboarding" className="header-logo">
-              <img src={logo} alt="Ravi Sweets" className="header-logo-img" />
-            </Link>
           </div>
 
-          <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            {/* Global Printer Connection Widgets */}
-            <div className="header-printer-status-bar">
-              {bluetoothConnected ? (
-                <button className="header-print-status-btn connected ble" title={`BLE: ${connectedDevice}`} onClick={disconnectPrinter}>
-                  <BluetoothIcon size={13} />
-                  <span>BLE: {connectedDevice ? (connectedDevice.length > 10 ? `${connectedDevice.substring(0, 10)}...` : connectedDevice) : 'Connected'}</span>
-                </button>
-              ) : (
-                <button className="header-print-status-btn disconnected ble" title="Connect Bluetooth Printer" onClick={handleBluetoothConnect}>
-                  <BluetoothIcon size={13} />
-                  <span>Connect BLE</span>
-                </button>
-              )}
-
-              {qzConnected ? (
-                <button className="header-print-status-btn connected usb" title={`USB: ${selectedQZPrinter}`} onClick={() => setShowQZModal(true)}>
-                  <UsbIcon size={13} />
-                  <span>USB: {selectedQZPrinter ? (selectedQZPrinter.length > 10 ? `${selectedQZPrinter.substring(0, 10)}...` : selectedQZPrinter) : 'Connected'}</span>
-                </button>
-              ) : (
-                <button className="header-print-status-btn disconnected usb" title="Connect USB Printer" onClick={connectQZTray} disabled={qzConnecting}>
-                  <UsbIcon size={13} />
-                  <span>{qzConnecting ? `USB: ${qzConnectTimer}s` : 'Connect USB'}</span>
-                </button>
-              )}
-            </div>
-
-            <div className="admin-badge">
-              <Star size={12} fill="currentColor" />
-              <span>{entityRole}{entityName ? ` - ${entityName}` : ''}</span>
-            </div>
+          <div className="portal-sidebar-menu">
+            <div className="portal-sidebar-section-title">CORE MODULES</div>
+            {links.map(link => (
+              <Link 
+                key={link.path} 
+                to={link.path} 
+                onClick={closeSidebar}
+                className={`portal-sidebar-item ${location.pathname.startsWith(link.path) ? 'active' : ''}`}
+              >
+                {React.cloneElement(link.icon, { size: 18, className: 'portal-sidebar-icon' })}
+                <span className="portal-sidebar-label">{link.label}</span>
+                {link.badge && <span className="portal-sidebar-badge">{link.badge}</span>}
+              </Link>
+            ))}
           </div>
-        </header>
 
-        <main className="main-content">
+          <div className="portal-sidebar-footer">
+            <button 
+              onClick={() => { closeSidebar(); navigate('/onboarding'); }} 
+              className="portal-sidebar-switch-btn" 
+              title="Switch Portal"
+            >
+              <Home size={18} />
+              <span className="portal-sidebar-label">Switch Portal</span>
+            </button>
+            <button 
+              onClick={() => { closeSidebar(); handleLogout(); }} 
+              className="portal-sidebar-logout-btn" 
+              title="Logout"
+            >
+              <LogOut size={18} />
+              <span className="portal-sidebar-label">Logout</span>
+            </button>
+          </div>
+        </aside>
+
+        {isSidebarOpen && (
+          <div className="portal-sidebar-overlay" onClick={closeSidebar}></div>
+        )}
+
+        <main className="portal-main-content">
           {children}
         </main>
       </div>
+
+
 
       {/* ========================================== */}
       {/* GLOBAL PRINTER UTILITY MODALS (PORTALS)    */}

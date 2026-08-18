@@ -32,10 +32,11 @@ import IndividualPortal from './portals/IndividualPortal/IndividualPortal';
 import StoreWorkSheet from './pages/StoreWorkSheet/StoreWorkSheet';
 import ScanBox from './pages/ScanBox/ScanBox';
 import Dashboard from './pages/Dashboard/Dashboard';
-import StockAnalysis from './pages/StockAnalysis/StockAnalysis';
-import StockEntry from './pages/StockEntry/StockEntry';
-import Vendors from './pages/Vendors/Vendors';
+import WalkInSales from './pages/WalkInSales/WalkInSales';
+import SuperAdminPOS from './pages/SuperAdminPOS/SuperAdminPOS';
+import BarcodeGenerator from './pages/BarcodeGenerator/BarcodeGenerator';
 import { Toaster } from 'react-hot-toast';
+
 import { NotificationProvider } from './context/NotificationContext';
 
 
@@ -98,7 +99,11 @@ function App() {
           {/* Super Admin Module Routes */}
           <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
           <Route path="/orders" element={<ProtectedRoute><Layout><Orders /></Layout></ProtectedRoute>} />
+          <Route path="/pos-billing" element={<ProtectedRoute><Layout><SuperAdminPOS /></Layout></ProtectedRoute>} />
+          <Route path="/barcode-generator" element={<ProtectedRoute><Layout><BarcodeGenerator /></Layout></ProtectedRoute>} />
+          <Route path="/walkin-sales" element={<ProtectedRoute><Layout><WalkInSales /></Layout></ProtectedRoute>} />
           <Route path="/store-worksheet" element={<ProtectedRoute><Layout><StoreWorkSheet /></Layout></ProtectedRoute>} />
+
           <Route path="/customers" element={<ProtectedRoute><Layout><Customers /></Layout></ProtectedRoute>} />
           <Route path="/customers/:id" element={<ProtectedRoute><Layout><CustomerDetails /></Layout></ProtectedRoute>} />
           <Route path="/items" element={<ProtectedRoute><Layout><Items /></Layout></ProtectedRoute>} />
@@ -115,9 +120,6 @@ function App() {
           <Route path="/employees" element={<ProtectedRoute><Layout><Employees /></Layout></ProtectedRoute>} />
           <Route path="/employees/:id" element={<ProtectedRoute><Layout><EmployeeDetails /></Layout></ProtectedRoute>} />
           <Route path="/timesheet" element={<ProtectedRoute><TimeSheet /></ProtectedRoute>} />
-          <Route path="/stock" element={<ProtectedRoute><Layout><StockAnalysis /></Layout></ProtectedRoute>} />
-          <Route path="/stock-entry" element={<ProtectedRoute><Layout><StockEntry /></Layout></ProtectedRoute>} />
-          <Route path="/vendors" element={<ProtectedRoute><Layout><Vendors /></Layout></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><PlaceholderPage title="Reports" /></ProtectedRoute>} />
           <Route path="/support" element={<ProtectedRoute><Layout><Support /></Layout></ProtectedRoute>} />
           <Route path="/audit" element={<ProtectedRoute><PlaceholderPage title="Audit Logs" /></ProtectedRoute>} />

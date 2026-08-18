@@ -1,180 +1,259 @@
 .header {
-  height: 60px;
+  height: 52px;
   background: var(--primary-color);
-  padding: 0 30px;
+  padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* border-bottom-left-radius: 24px;
-  border-bottom-right-radius: 24px; */
   position: relative;
   z-index: 100;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
 }
 
 .header-logo {
   display: flex;
   align-items: center;
+  gap: 8px;
   text-decoration: none;
 }
 
 .header-logo-img {
-  height: 54px;
+  height: 32px;
   width: auto;
   object-fit: contain;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
 }
 
-.admin-badge {
+.header-brand-title {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.2px;
+}
+
+.header-season-tag {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Polaris Top Central Search Bar */
+.header-search-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 34px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 16px;
+  transition: all 0.2s ease;
+}
+
+.header-search-container:focus-within {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+
+.header-search-icon {
+  color: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
+}
+
+.header-search-input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  color: #ffffff;
+  font-size: 13px;
+  outline: none;
+}
+
+.header-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.header-search-shortcut {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: linear-gradient(90deg, #F9D423 0%, #FF4E50 100%);
-  color: #1A0B48;
-  padding: 2px 8px;
-  border-radius: 20px;
+}
+
+.header-search-shortcut kbd {
+  background: rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 10px;
-  font-weight: 800;
-  white-space: nowrap;
-  box-shadow: 0 4px 15px rgba(255, 78, 80, 0.2);
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: inherit;
 }
 
-.hd-container {
-  position: relative;
-}
-
-.hd-trigger {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #FFFFFF;
-  padding: 8px 16px;
-  border-radius: 12px;
+/* Right Section */
+.header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  cursor: pointer;
-  min-width: 160px;
-  justify-content: space-between;
+  gap: 12px;
 }
 
-.hd-trigger span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 140px;
-}
-
-.hd-trigger:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-}
-
-.hd-menu {
-  position: absolute;
-  top: calc(100% + 15px);
-  right: 0;
-  width: 280px;
-  background: #FFFFFF;
-  border-radius: 20px;
-  padding: 15px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
-  display: none;
-  z-index: 101;
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.hd-container:hover .hd-menu {
-  display: block;
-}
-
-.hd-menu::before {
-  content: '';
-  position: absolute;
-  top: -20px;
-  left: 0;
-  width: 100%;
-  height: 20px;
-  background: transparent;
-}
-
-.hd-item {
+.header-view-as-btn {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 12px 15px;
-  color: #4A5568;
-  text-decoration: none;
-  border-radius: 12px;
-  font-size: 15px;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  padding: 0 12px;
+  height: 32px;
+  border-radius: 16px;
+  font-size: 12px;
   font-weight: 600;
   transition: all 0.2s ease;
 }
 
-.hd-item:hover,
-.hd-item.active {
-  background: #F7FAFC;
-  color: var(--primary-color);
+.header-view-as-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
 }
 
-.hd-item.active svg {
-  color: var(--primary-color);
-}
-
-.hd-item.active {
-  background: #F0FFF4;
+.header-icon-btn {
   position: relative;
-}
-
-.hd-item.active::after {
-  content: '';
-  position: absolute;
-  left: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 20px;
-  background: var(--primary-color);
-  border-radius: 4px;
-}
-
-.hd-logout-btn {
-  width: 100%;
-  margin-top: 10px;
-  padding: 15px;
-  border-top: 1px solid #E2E8F0;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 15px;
-  color: #E53E3E;
-  background: transparent;
-  font-size: 15px;
-  font-weight: 700;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
-.hd-logout-btn:hover {
-  background: #FFF5F5;
+.header-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.header-notif-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #e11d48;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--primary-color);
+}
+
+/* Store / User Avatar Switcher */
+.header-store-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 3px 10px 3px 4px;
+  border-radius: 20px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-store-badge:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.header-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  color: #0A2A1B;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-store-name {
+  white-space: nowrap;
+}
+
+/* Global Header Printer Status Button Styles */
+.header-printer-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-print-status-btn {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  font-family: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.header-print-status-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #FFFFFF;
+}
+
+.header-print-status-btn.connected.pos {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #F59E0B;
+  color: #FBBF24;
+}
+
+.header-print-status-btn.connected.wifi {
+  background: rgba(14, 165, 233, 0.2);
+  border-color: #0EA5E9;
+  color: #38BDF8;
+}
+
+.header-print-status-btn.connected.ble {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10B981;
+  color: #34D399;
+}
+
+.header-print-status-btn.connected.usb {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3B82F6;
+  color: #60A5FA;
 }
 
 .header-menu-btn {
@@ -182,104 +261,34 @@
   background: transparent;
   border: none;
   color: #FFFFFF;
-  padding: 8px;
+  padding: 6px;
   cursor: pointer;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  transition: background-color 0.2s ease;
-  margin-right: 5px;
+  border-radius: 6px;
 }
 
 .header-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 @media (max-width: 1024px) {
   .header-menu-btn {
     display: flex;
   }
+  .header-search-shortcut {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {
   .header {
-    padding: 0 15px;
-    height: 64px;
+    padding: 0 12px;
   }
-  
-  .header-logo-img {
-    height: 40px;
+  .header-search-container {
+    display: none;
   }
-}
-
-.dropdown-menu div::-webkit-scrollbar {
-  width: 4px;
-}
-
-.dropdown-menu div::-webkit-scrollbar-thumb {
-  background: #E2E8F0;
-  border-radius: 10px;
-}
-
-/* Global Header Printer Status Button Styles */
-.header-printer-status-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.header-print-status-btn {
-  height: 32px;
-  padding: 0 12px;
-  font-size: 11px;
-  font-weight: 700;
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.1, 0.8, 0.3, 1);
-  outline: none;
-  font-family: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.header-print-status-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.35);
-  transform: translateY(-1px);
-  color: #FFFFFF;
-}
-
-.header-print-status-btn.connected.ble {
-  background: rgba(16, 185, 129, 0.15);
-  border-color: #10B981;
-  color: #10B981;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
-}
-
-.header-print-status-btn.connected.ble:hover {
-  background: rgba(16, 185, 129, 0.25);
-  color: #34D399;
-}
-
-.header-print-status-btn.connected.usb {
-  background: rgba(59, 130, 246, 0.15);
-  border-color: #3B82F6;
-  color: #3B82F6;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
-}
-
-.header-print-status-btn.connected.usb:hover {
-  background: rgba(59, 130, 246, 0.25);
-  color: #60A5FA;
-}
-
-@media (max-width: 640px) {
-  .header-printer-status-bar {
-    display: none; /* Hide on extremely small viewports to prevent layout wrapping */
+  .header-store-name, .header-season-tag {
+    display: none;
   }
 }

@@ -148,21 +148,27 @@ const Categories = () => {
   );
 
   return (
-    <div className="cat-container">
-      <div className="cat-header">
-        <div className="cat-header-info">
-          <h1>Product Categories</h1>
-          <p>Organize sweets, snacks, and other items into categories</p>
+    <div className="polaris-page-container">
+      {/* Polaris Header Bar */}
+      <div className="polaris-header-bar">
+        <div className="polaris-page-title-group">
+          <div className="polaris-page-title-icon">
+            <Tag size={24} />
+          </div>
+          <h1 className="polaris-page-title">Collections</h1>
         </div>
         {!showAddForm && (
-          <button className="cat-add-btn" onClick={() => setShowAddForm(true)}>
-            <Plus size={20} /> Add Category
-          </button>
+          <div className="polaris-header-actions">
+            <button className="polaris-btn polaris-btn-primary" onClick={() => setShowAddForm(true)}>
+              <Plus size={16} /> Add collection
+            </button>
+          </div>
         )}
       </div>
 
       <div className="cat-content-layout">
         <div className={`cat-list-section ${showAddForm ? 'shrink' : 'full'}`}>
+
           <div className="cat-search-bar">
             <Search size={18} className="cat-search-icon" />
             <input 

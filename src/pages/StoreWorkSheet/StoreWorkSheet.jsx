@@ -9,10 +9,7 @@ import {
   PackageCheck,
   Building,
   X,
-  Search,
-  Layers,
-  CheckCircle2,
-  AlertCircle
+  Search
 } from 'lucide-react';
 import { db } from '../../config/firebase';
 import {
@@ -33,52 +30,6 @@ import { createPortal } from 'react-dom';
 import Loader from '../../components/Loader/Loader';
 import './StoreWorkSheet.css';
 
-// Helper unit constants & utilities
-const UNIT_OPTIONS = [
-  { value: 'KG', label: 'KG' },
-  { value: 'Tray', label: 'Tray' },
-  { value: 'Piece', label: 'Piece' },
-  { value: 'litre', label: 'litre' }
-];
-
-const normalizeUnit = (unit) => {
-  if (!unit) return 'KG';
-  const u = String(unit).trim().toLowerCase();
-  if (u === 'weight' || u === 'kg' || u === 'kgs' || u === 'kilogram') return 'KG';
-  if (u === 'tray' || u === 'trays') return 'Tray';
-  if (u === 'piece' || u === 'pieces' || u === 'pcs' || u === 'pc') return 'Piece';
-  if (u === 'litre' || u === 'liter' || u === 'ltr' || u === 'litres' || u === 'liters') return 'litre';
-  return 'KG';
-};
-
-const getUnitDisplayLabel = (unit) => {
-  const norm = normalizeUnit(unit);
-  if (norm === 'KG') return 'KG';
-  if (norm === 'Tray') return 'Tray';
-  if (norm === 'Piece') return 'Pieces';
-  if (norm === 'litre') return 'litre';
-  return norm;
-};
-
-const getUnitStep = (unit) => {
-  const norm = normalizeUnit(unit);
-  return (norm === 'KG' || norm === 'litre') ? '0.01' : '1';
-};
-
-const getUnitPlaceholder = (unit) => {
-  const norm = normalizeUnit(unit);
-  return (norm === 'KG' || norm === 'litre') ? '0.00' : '0';
-};
-
-const getUnitClass = (unit) => {
-  const norm = normalizeUnit(unit);
-  if (norm === 'KG') return 'weight';
-  if (norm === 'Tray') return 'tray';
-  if (norm === 'Piece') return 'piece';
-  if (norm === 'litre') return 'litre';
-  return 'weight';
-};
-
 
 // Get Tomorrow's Date String in YYYY-MM-DD format
 const getTomorrowDateString = () => {
@@ -90,327 +41,12 @@ const getTomorrowDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
-// Component for Worksheet Stock Details & Inventory Updates
-const WorksheetStockSection = ({ sheet, items, stores, onSheetUpdated }) => {
-  const [recipes, setRecipes] = useState([]);
-  const [stockAssignments, setStockAssignments] = useState([]);
-  const [stockItems, setStockItems] = useState([]);
-  const [loadingStock, setLoadingStock] = useState(true);
-  const [updatingItems, setUpdatingItems] = useState({});
-  const [updatingAll, setUpdatingAll] = useState(false);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [recipeSnap, assignSnap, stockSnap] = await Promise.all([
-          getDocs(collection(db, 'recipes')),
-          getDocs(collection(db, 'stock_assignments')),
-          getDocs(collection(db, 'stock_items'))
-        ]);
-        setRecipes(recipeSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setStockItems(stockSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (err) {
-        console.error('Failed to load stock data for worksheet', err);
-      } finally {
-        setLoadingStock(false);
-      }
-    };
-    fetchData();
-  }, [sheet.id]);
-
-  const computeStockNeeds = () => {
-    const needsMap = {};
-    const wsQuantities = sheet.quantities || {};
-    const sheetUnits = sheet.itemUnits || {};
-    const sheetTrayWeights = sheet.trayWeights || {};
-
-    items.forEach(item => {
-      const storeQtyMap = wsQuantities[item.id] || {};
-      const totalQty = Object.values(storeQtyMap).reduce((sum, q) => sum + Number(q || 0), 0);
-      if (totalQty <= 0) return;
-
-      const currentUnit = sheetUnits[item.id] || normalizeUnit(item.unit);
-      const kgsPerTray = Number(sheetTrayWeights[item.id] || 0);
-
-      // Determine effective quantity for recipe ingredient calculation
-      let effectiveQty = totalQty;
-      if (currentUnit === 'Tray' && kgsPerTray > 0) {
-        effectiveQty = totalQty * kgsPerTray;
-      }
-
-      // Find recipe matching by itemId or itemName
-      const recipe = recipes.find(r =>
-        (r.itemId && r.itemId === item.id) ||
-        (!r.itemId && r.name.toLowerCase().trim() === (item.name || '').toLowerCase().trim())
-      );
-      if (!recipe || !recipe.ingredients) return;
-
-      recipe.ingredients.forEach(ing => {
-        if (!ing.stockItemId) return;
-        const requiredQty = Number(ing.qty) * effectiveQty;
-
-        if (!needsMap[ing.stockItemId]) {
-          const assignments = stockAssignments.filter(a => a.stockItemId === ing.stockItemId);
-          const totalCurrentQty = assignments.reduce((sum, a) => sum + (a.currentQty || 0), 0);
-
-          needsMap[ing.stockItemId] = {
-            stockItemId: ing.stockItemId,
-            stockItemName: ing.stockItemName || stockItems.find(si => si.id === ing.stockItemId)?.name || 'Unknown',
-            unit: ing.unit || 'Weight',
-            totalQtyNeeded: 0,
-            currentQty: totalCurrentQty,
-            assignments: assignments,
-            updated: sheet.stockUpdated?.[ing.stockItemId] || false
-          };
-        }
-        needsMap[ing.stockItemId].totalQtyNeeded += requiredQty;
-      });
-    });
-
-    return Object.values(needsMap);
-  };
-
-  const handleUpdateSingleStock = async (stockNeed) => {
-    if (stockNeed.updated) {
-      toast.error('Stock already updated for this item');
-      return;
-    }
-    setUpdatingItems(prev => ({ ...prev, [stockNeed.stockItemId]: true }));
-    try {
-      let remainingToDeduct = stockNeed.totalQtyNeeded;
-      for (const assignment of stockNeed.assignments) {
-        if (remainingToDeduct <= 0) break;
-        const deductFromThis = Math.min(assignment.currentQty || 0, remainingToDeduct);
-        const newQty = Math.max(0, (assignment.currentQty || 0) - deductFromThis);
-        await updateDoc(doc(db, 'stock_assignments', assignment.id), {
-          currentQty: newQty,
-          updatedAt: serverTimestamp()
-        });
-        remainingToDeduct -= deductFromThis;
-      }
-
-      const updatedStockUpdated = {
-        ...(sheet.stockUpdated || {}),
-        [stockNeed.stockItemId]: true
-      };
-
-      if (sheet.id) {
-        await updateDoc(doc(db, 'store_worksheets', sheet.id), {
-          [`stockUpdated.${stockNeed.stockItemId}`]: true,
-          updatedAt: serverTimestamp()
-        });
-      }
-
-      const assignSnap = await getDocs(collection(db, 'stock_assignments'));
-      setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      
-      onSheetUpdated({
-        ...sheet,
-        stockUpdated: updatedStockUpdated
-      });
-
-      toast.success(`Stock updated for ${stockNeed.stockItemName}`);
-    } catch (err) {
-      console.error('Stock update error:', err);
-      toast.error(`Failed to update stock for ${stockNeed.stockItemName}`);
-    } finally {
-      setUpdatingItems(prev => ({ ...prev, [stockNeed.stockItemId]: false }));
-    }
-  };
-
-  const handleUpdateAllStock = async () => {
-    const needs = computeStockNeeds();
-    const pendingNeeds = needs.filter(n => !n.updated);
-    if (pendingNeeds.length === 0) {
-      toast.error('All stock items already updated for this worksheet');
-      return;
-    }
-    setUpdatingAll(true);
-    try {
-      const updatesMap = {};
-      const newStockUpdated = { ...(sheet.stockUpdated || {}) };
-
-      for (const stockNeed of pendingNeeds) {
-        let remainingToDeduct = stockNeed.totalQtyNeeded;
-        for (const assignment of stockNeed.assignments) {
-          if (remainingToDeduct <= 0) break;
-          const deductFromThis = Math.min(assignment.currentQty || 0, remainingToDeduct);
-          const newQty = Math.max(0, (assignment.currentQty || 0) - deductFromThis);
-          await updateDoc(doc(db, 'stock_assignments', assignment.id), {
-            currentQty: newQty,
-            updatedAt: serverTimestamp()
-          });
-          remainingToDeduct -= deductFromThis;
-        }
-        updatesMap[`stockUpdated.${stockNeed.stockItemId}`] = true;
-        newStockUpdated[stockNeed.stockItemId] = true;
-      }
-
-      if (sheet.id) {
-        await updateDoc(doc(db, 'store_worksheets', sheet.id), {
-          ...updatesMap,
-          updatedAt: serverTimestamp()
-        });
-      }
-
-      const assignSnap = await getDocs(collection(db, 'stock_assignments'));
-      setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-
-      onSheetUpdated({
-        ...sheet,
-        stockUpdated: newStockUpdated
-      });
-
-      toast.success('All stock items updated successfully!');
-    } catch (err) {
-      console.error('Update all stock error:', err);
-      toast.error('Failed to update all stock');
-    } finally {
-      setUpdatingAll(false);
-    }
-  };
-
-  if (loadingStock) {
-    return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <Loader type="section" message="Loading recipe stock calculations..." />
-      </div>
-    );
-  }
-
-  const stockNeeds = computeStockNeeds();
-  const allUpdated = stockNeeds.length > 0 && stockNeeds.every(n => n.updated);
-
-  return (
-    <div style={{ padding: '10px 0' }}>
-      {stockNeeds.length === 0 ? (
-        <div style={{ padding: '40px 20px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-          <Layers size={36} style={{ margin: '0 auto 12px', opacity: 0.4, color: 'var(--primary-color)' }} />
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-            No recipe ingredients mapped for the items in this worksheet.
-          </div>
-          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>
-            Go to Stock Analysis → Recipes to link recipes with ingredients to enable stock tracking.
-          </div>
-        </div>
-      ) : (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-            <h4 style={{ fontSize: '14px', color: 'var(--primary-color)', margin: 0, fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Layers size={16} />
-              Raw Materials Required for Worksheet ({sheet.date})
-            </h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '700', background: '#f1f5f9', padding: '4px 10px', borderRadius: '6px' }}>
-                {stockNeeds.filter(n => n.updated).length} of {stockNeeds.length} updated
-              </span>
-              <button
-                onClick={handleUpdateAllStock}
-                disabled={updatingAll || allUpdated}
-                style={{
-                  padding: '7px 16px',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: allUpdated ? '#d1fae5' : 'var(--primary-color)',
-                  color: allUpdated ? '#059669' : '#fff',
-                  cursor: allUpdated ? 'default' : 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  boxShadow: allUpdated ? 'none' : '0 2px 6px rgba(52,139,221,0.3)',
-                  transition: 'all 0.2s'
-                }}
-              >
-                {updatingAll ? <div className="loader" style={{ width: '12px', height: '12px', borderTopColor: '#fff' }}></div> : <CheckCircle2 size={14} />}
-                {allUpdated ? 'All Stock Updated' : 'Update All Stock'}
-              </button>
-            </div>
-          </div>
-
-          <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-            <table className="ws-table" style={{ margin: 0 }}>
-              <thead>
-                <tr>
-                  <th>Stock Raw Material</th>
-                  <th>Total Required Qty</th>
-                  <th>Available in Stock</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'center' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stockNeeds.map(need => (
-                  <tr key={need.stockItemId} style={{ background: need.updated ? '#f0fdf4' : '#ffffff' }}>
-                    <td style={{ fontWeight: '700', fontSize: '13px' }}>
-                      {need.updated && <CheckCircle2 size={14} style={{ marginRight: '6px', verticalAlign: 'middle', color: '#10b981' }} />}
-                      {need.stockItemName}
-                    </td>
-                    <td>
-                      <span style={{ fontWeight: '800', color: 'var(--primary-color)', fontSize: '13px' }}>
-                        {need.totalQtyNeeded.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontWeight: '800', fontSize: '13px', color: need.currentQty < need.totalQtyNeeded ? '#dc2626' : '#059669' }}>
-                        {need.currentQty.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}
-                      </span>
-                      {need.currentQty < need.totalQtyNeeded && (
-                        <span style={{ fontSize: '10px', color: '#dc2626', marginLeft: '6px', fontWeight: '700', background: '#fef2f2', padding: '2px 6px', borderRadius: '4px' }}>
-                          <AlertCircle size={10} style={{ verticalAlign: 'middle', marginRight: '2px' }} />Low Stock
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      {need.updated ? (
-                        <span style={{ fontSize: '11px', fontWeight: '800', color: '#059669', background: '#d1fae5', padding: '3px 8px', borderRadius: '6px' }}>✓ Updated</span>
-                      ) : (
-                        <span style={{ fontSize: '11px', fontWeight: '800', color: '#92400e', background: '#fef3c7', padding: '3px 8px', borderRadius: '6px' }}>Pending</span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      {!need.updated && (
-                        <button
-                          onClick={() => handleUpdateSingleStock(need)}
-                          disabled={updatingItems[need.stockItemId]}
-                          style={{
-                            padding: '6px 14px',
-                            fontSize: '11px',
-                            fontWeight: '800',
-                            borderRadius: '7px',
-                            border: '1.5px solid var(--primary-color)',
-                            background: '#fff',
-                            color: 'var(--primary-color)',
-                            cursor: 'pointer',
-                            display: 'inline-flex', alignItems: 'center', gap: '4px',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          {updatingItems[need.stockItemId] ? <div className="loader" style={{ width: '10px', height: '10px', borderTopColor: 'var(--primary-color)' }}></div> : null}
-                          Update Stock
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-    </div>
-  );
-};
-
 const StoreWorkSheet = () => {
   const [activeTab, setActiveTab] = useState('active'); // 'active' or 'history'
   const [date, setDate] = useState(getTomorrowDateString());
   const [stores, setStores] = useState([]);
   const [items, setItems] = useState([]);
   const [quantities, setQuantities] = useState({}); // { [itemId]: { [storeId]: quantity } }
-  const [itemUnits, setItemUnits] = useState({}); // { [itemId]: 'KG' | 'Tray' | 'Piece' | 'litre' }
-  const [trayWeights, setTrayWeights] = useState({}); // { [itemId]: kgsPerTray }
-  const [modalTab, setModalTab] = useState('overview'); // 'overview' or 'stock'
   const [history, setHistory] = useState([]);
   const [previewSheet, setPreviewSheet] = useState(null);
   const [printTargetSheet, setPrintTargetSheet] = useState(null);
@@ -427,7 +63,8 @@ const StoreWorkSheet = () => {
     qzConnected,
     selectedQZPrinter,
     printRawBLE,
-    printRawUSB
+    printRawUSB,
+    printHTMLContent
   } = usePrinter();
 
   // Fetch Items & Stores on Load
@@ -465,17 +102,9 @@ const StoreWorkSheet = () => {
         if (!snap.empty) {
           const sheet = snap.docs[0].data();
           setQuantities(sheet.quantities || {});
-          if (sheet.itemUnits) {
-            setItemUnits(sheet.itemUnits);
-          }
-          if (sheet.trayWeights) {
-            setTrayWeights(sheet.trayWeights);
-          }
           toast.success(`Loaded saved worksheet for ${date}`);
         } else {
           setQuantities({});
-          setItemUnits({});
-          setTrayWeights({});
         }
       } catch (err) {
         console.error("Error checking worksheet:", err);
@@ -517,27 +146,6 @@ const StoreWorkSheet = () => {
     }));
   };
 
-  const handleTrayWeightChange = (itemId, value) => {
-    const val = value === '' ? '' : parseFloat(value);
-    setTrayWeights(prev => ({
-      ...prev,
-      [itemId]: val
-    }));
-  };
-
-  const handleUnitChange = async (itemId, newUnit) => {
-    setItemUnits(prev => ({
-      ...prev,
-      [itemId]: newUnit
-    }));
-    setItems(prev => prev.map(item => item.id === itemId ? { ...item, unit: newUnit } : item));
-    try {
-      await updateDoc(doc(db, 'items', itemId), { unit: newUnit });
-    } catch (err) {
-      console.error("Error updating item unit in Firestore:", err);
-    }
-  };
-
   const handleSave = async () => {
     if (!date) {
       toast.error("Please select a date.");
@@ -563,8 +171,6 @@ const StoreWorkSheet = () => {
       const worksheetPayload = {
         date,
         quantities: cleanedQuantities,
-        itemUnits,
-        trayWeights,
         updatedAt: serverTimestamp()
       };
 
@@ -613,7 +219,6 @@ const StoreWorkSheet = () => {
   const buildWorksheetESCPOSBytes = (worksheet, charsPerLine = 48, printType = 'store') => {
     const encoder = new TextEncoder();
     const wsQuantities = worksheet.quantities || {};
-    const sheetUnits = worksheet.itemUnits || itemUnits;
 
     const INIT = new Uint8Array([0x1b, 0x40]);
     const CENTER = new Uint8Array([0x1b, 0x61, 0x01]);
@@ -639,7 +244,7 @@ const StoreWorkSheet = () => {
 
     // Header
     bytes.push(...CENTER, ...DOUBLE_SIZE);
-    bytes.push(...encoder.encode("RAVI SWEETS\n"));
+    bytes.push(...encoder.encode("RAJU GHEE SWEETS\n"));
     bytes.push(...NORMAL_SIZE);
     bytes.push(...encoder.encode("STORE WORK SHEET\n"));
     bytes.push(...LEFT);
@@ -660,8 +265,7 @@ const StoreWorkSheet = () => {
         items.forEach(item => {
           const qty = wsQuantities[item.id]?.[store.id];
           if (qty && qty > 0) {
-            const currentUnit = sheetUnits[item.id] || normalizeUnit(item.unit);
-            const unitLabel = getUnitDisplayLabel(currentUnit);
+            const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pcs';
             storeItems.push({ name: item.name, qty, unitLabel });
           }
         });
@@ -710,10 +314,9 @@ const StoreWorkSheet = () => {
         if (activeAllocations.length > 0) {
           totalActiveItems++;
           const total = activeAllocations.reduce((sum, [_, qty]) => sum + qty, 0);
-          const currentUnit = sheetUnits[item.id] || normalizeUnit(item.unit);
-          const unitLabel = getUnitDisplayLabel(currentUnit);
+          const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pcs';
 
-          if (currentUnit === 'KG') {
+          if (item.unit === 'Weight') {
             overallSumWeight += total;
           } else {
             overallSumPieces += total;
@@ -736,7 +339,7 @@ const StoreWorkSheet = () => {
 
           // Dashed divider line and sum
           bytes.push(...encoder.encode(miniDashedLine));
-          const sumText = `SUM: ${total.toFixed(currentUnit === 'KG' ? 2 : 0)} ${unitLabel}`;
+          const sumText = `SUM: ${total.toFixed(item.unit === 'Weight' ? 2 : 0)} ${unitLabel}`;
           bytes.push(...BOLD_ON, ...RIGHT);
           bytes.push(...encoder.encode(sumText + '\n'));
           bytes.push(...BOLD_OFF, ...LEFT);
@@ -770,27 +373,17 @@ const StoreWorkSheet = () => {
   };
 
   const printHTMLFallback = (worksheet, printType = 'store') => {
-    const printWindow = window.open('', '_blank', 'width=350,height=600');
-    if (!printWindow) {
-      toast.error("Popup blocked! Please allow popups for thermal printing.");
-      return;
-    }
-
     const wsQuantities = worksheet.quantities || {};
-    const sheetUnits = worksheet.itemUnits || itemUnits;
-
     let bodyContentHtml = '';
 
     if (printType === 'store') {
-      // 1. Build Store-Wise Allocations Section
       let storeWiseHtml = '';
       stores.forEach(store => {
         let storeItems = [];
         items.forEach(item => {
           const qty = wsQuantities[item.id]?.[store.id];
           if (qty && qty > 0) {
-            const currentUnit = sheetUnits[item.id] || normalizeUnit(item.unit);
-            const unitLabel = getUnitDisplayLabel(currentUnit);
+            const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pcs';
             storeItems.push({ name: item.name, qty, unitLabel });
           }
         });
@@ -809,16 +402,10 @@ const StoreWorkSheet = () => {
         }
       });
 
-      if (!storeWiseHtml) {
-        storeWiseHtml = '<div class="text-center">No allocations recorded.</div>';
-      }
-
       bodyContentHtml = `
         <div class="bold section-title">I. STORE-WISE ITEMS</div>
         ${storeWiseHtml}
-        
         <div class="divider"></div>
-        
         <div class="bold section-title">II. HANDWRITTEN NOTES</div>
         <div class="note-line"></div>
         <div class="note-line"></div>
@@ -826,7 +413,6 @@ const StoreWorkSheet = () => {
     }
 
     if (printType === 'item') {
-      // 2. Build Globally Consolidated Items Section
       let itemWiseHtml = '';
       let overallSumWeight = 0;
       let overallSumPieces = 0;
@@ -839,157 +425,86 @@ const StoreWorkSheet = () => {
         if (activeAllocations.length > 0) {
           totalActiveItems++;
           const total = activeAllocations.reduce((sum, [_, qty]) => sum + qty, 0);
-          const currentUnit = sheetUnits[item.id] || normalizeUnit(item.unit);
-          const unitLabel = getUnitDisplayLabel(currentUnit);
+          const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pcs';
 
-          if (currentUnit === 'KG') {
+          if (item.unit === 'Weight') {
             overallSumWeight += total;
           } else {
             overallSumPieces += total;
           }
 
-          itemWiseHtml += `<div class="bold item-name-title">${item.name.toUpperCase()} (${unitLabel})</div>`;
+          itemWiseHtml += `
+            <div class="item-row">
+              <span class="bold">${item.name}</span>
+              <span class="bold grand-val">${total} ${unitLabel}</span>
+            </div>
+          `;
+
           activeAllocations.forEach(([storeId, qty]) => {
-            const storeName = stores.find(s => s.id === storeId)?.name || 'Unknown Store';
+            const st = stores.find(s => s.id === storeId);
+            const stName = st ? st.name : storeId;
             itemWiseHtml += `
-              <div class="item-row indent">
-                <span>- ${storeName}</span>
+              <div class="sub-store-row">
+                <span>↳ ${stName}:</span>
                 <span>${qty} ${unitLabel}</span>
               </div>
             `;
           });
 
-          // Add visual divider note line before writing the sum
-          itemWiseHtml += `
-            <div class="mini-divider-dashed"></div>
-            <div class="item-row indent bold sum-row">
-              <span>SUM:</span>
-              <span>${total.toFixed(currentUnit === 'KG' ? 2 : 0)} ${unitLabel}</span>
-            </div>
-            <div class="mini-divider"></div>
-          `;
+          itemWiseHtml += `<div class="mini-divider"></div>`;
         }
       });
 
-      if (!itemWiseHtml) {
-        itemWiseHtml = '<div class="text-center">No allocations recorded.</div>';
-      }
-
       bodyContentHtml = `
-        <div class="bold section-title">I. GLOBALLY CONSOLIDATED</div>
+        <div class="bold section-title">CONSOLIDATED DISPATCH TOTALS</div>
+        <div class="summary-box">
+          <div>ITEMS COUNT: <b>${totalActiveItems} items</b></div>
+          <div>TOTAL WEIGHT: <b>${overallSumWeight.toFixed(2)} KG</b></div>
+          <div>TOTAL PIECES: <b>${overallSumPieces} Pcs</b></div>
+        </div>
+        <div class="divider"></div>
         ${itemWiseHtml}
-        
-        <div class="divider"></div>
-        
-        <div class="bold section-title">II. HANDWRITTEN NOTES</div>
-        <div class="note-line"></div>
-        <div class="note-line"></div>
-        
-        <div class="divider"></div>
-        
-        <div class="bold section-title">III. CUMULATIVE SUMS</div>
-        <div class="item-row">
-          <span>Allocated Items:</span>
-          <span class="bold">${totalActiveItems} Products</span>
-        </div>
-        <div class="item-row">
-          <span>Total Ghee Weight:</span>
-          <span class="bold">${overallSumWeight.toFixed(2)} KG</span>
-        </div>
-        <div class="item-row">
-          <span>Total Piece Count:</span>
-          <span class="bold">${overallSumPieces} Pcs</span>
-        </div>
       `;
     }
 
     const receiptContent = `
+      <!DOCTYPE html>
       <html>
         <head>
-          <title>Worksheet Print - ${worksheet.date}</title>
+          <meta charset="utf-8" />
+          <title>Worksheet Ticket - ${worksheet.date}</title>
           <style>
-            @page {
-              margin: 0;
-            }
+            @page { size: 80mm auto; margin: 2mm; }
             body {
               font-family: 'Courier New', Courier, monospace;
-              width: 80mm;
-              padding: 6mm 4mm;
-              margin: 0;
-              font-size: 13px;
+              width: 72mm;
+              margin: 0 auto;
+              padding: 4px;
+              font-size: 11px;
+              line-height: 1.2;
               color: #000;
-              background: #ffffff;
-              line-height: 1.4;
-              box-sizing: border-box;
+              background: #fff;
             }
             .text-center { text-align: center; }
+            .text-right { text-align: right; }
             .bold { font-weight: bold; }
-            .header {
-              font-size: 16px;
-              font-weight: bold;
-              margin-bottom: 2px;
-              text-transform: uppercase;
-            }
-            .subheader {
-              font-size: 11px;
-              margin-bottom: 6px;
-              letter-spacing: 1px;
-              text-transform: uppercase;
-            }
-            .divider {
-              border-top: 1.5px dashed #000;
-              margin: 8px 0;
-            }
-            .mini-divider {
-              border-top: 1px dotted #888;
-              margin: 5px 0;
-            }
-            .mini-divider-dashed {
-              border-top: 1px dashed #666;
-              margin: 4px 0;
-            }
-            .section-title {
-              font-size: 13px;
-              margin: 14px 0 6px 0;
-              text-transform: uppercase;
-              border-bottom: 1.5px solid #000;
-              padding-bottom: 2px;
-            }
-            .store-name-title {
-              font-size: 12px;
-              margin-top: 8px;
-              margin-bottom: 4px;
-            }
-            .item-name-title {
-              font-size: 12px;
-              margin-top: 8px;
-              margin-bottom: 4px;
-            }
-            .item-row {
-              display: flex;
-              justify-content: space-between;
-              margin: 2px 0;
-            }
-            .indent {
-              padding-left: 10px;
-            }
-            .sum-row {
-              margin-top: 2px;
-            }
-            .note-line {
-              border-bottom: 1px dotted #333;
-              height: 25px;
-              margin-bottom: 5px;
-            }
-            .footer {
-              margin-top: 30px;
-              font-size: 10px;
-              letter-spacing: 1px;
-            }
+            .header { font-size: 15px; }
+            .subheader { font-size: 12px; margin-top: 2px; }
+            .divider { border-bottom: 1px dashed #000; margin: 6px 0; }
+            .mini-divider { border-bottom: 1px dotted #aaa; margin: 3px 0; }
+            .section-title { font-size: 12px; text-decoration: underline; margin-bottom: 6px; text-align: center; }
+            .store-name-title { font-size: 11px; margin-top: 4px; background: #eee; padding: 2px; }
+            .item-row { display: flex; justify-content: space-between; margin: 2px 0; }
+            .indent { padding-left: 6px; }
+            .sub-store-row { display: flex; justify-content: space-between; padding-left: 10px; font-size: 10px; color: #333; }
+            .grand-val { font-size: 12px; }
+            .summary-box { background: #f9f9f9; border: 1px solid #ccc; padding: 4px; font-size: 10px; margin-bottom: 6px; }
+            .note-line { border-bottom: 1px dotted #333; height: 25px; margin-bottom: 5px; }
+            .footer { margin-top: 20px; font-size: 10px; letter-spacing: 1px; }
           </style>
         </head>
         <body>
-          <div class="text-center bold header">RAVI SWEETS</div>
+          <div class="text-center bold header">RAJU GHEE SWEETS</div>
           <div class="text-center subheader">STORE WORK SHEET</div>
           <div class="divider"></div>
           <div><strong>DATE:</strong> ${worksheet.date}</div>
@@ -1000,18 +515,11 @@ const StoreWorkSheet = () => {
           
           <div class="divider"></div>
           <div class="text-center footer">*** THERMAL TICKET PRINT ***</div>
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() { window.close(); }, 500);
-            };
-          </script>
         </body>
       </html>
     `;
 
-    printWindow.document.write(receiptContent);
-    printWindow.document.close();
+    printHTMLContent(receiptContent);
   };
 
   const handlePrint = async (worksheet, printType = 'store') => {
@@ -1051,28 +559,32 @@ const StoreWorkSheet = () => {
 
   return (
     <>
-      <div className="ws-container">
-      <div className="ws-header">
-        <div className="ws-header-info">
-          <h1>Store Work Sheet</h1>
-          <p>Plan, allocate, and distribute ghee sweets inventory across branches</p>
+      <div className="polaris-page-container">
+        {/* Polaris Header Bar */}
+        <div className="polaris-header-bar">
+          <div className="polaris-page-title-group">
+            <div className="polaris-page-title-icon">
+              <ClipboardList size={24} />
+            </div>
+            <h1 className="polaris-page-title">Store Work Sheet</h1>
+          </div>
+
+          <div className="polaris-header-actions">
+            <button
+              className={`polaris-btn ${activeTab === 'active' ? 'polaris-btn-primary' : 'polaris-btn-secondary'}`}
+              onClick={() => setActiveTab('active')}
+            >
+              <ClipboardList size={14} /> Active Sheet
+            </button>
+            <button
+              className={`polaris-btn ${activeTab === 'history' ? 'polaris-btn-primary' : 'polaris-btn-secondary'}`}
+              onClick={() => setActiveTab('history')}
+            >
+              <History size={14} /> History Log
+            </button>
+          </div>
         </div>
 
-        <div className="ws-tabs-container">
-          <button
-            className={`ws-tab-btn ${activeTab === 'active' ? 'active' : ''}`}
-            onClick={() => setActiveTab('active')}
-          >
-            <ClipboardList size={16} /> Active Sheet
-          </button>
-          <button
-            className={`ws-tab-btn ${activeTab === 'history' ? 'active' : ''}`}
-            onClick={() => setActiveTab('history')}
-          >
-            <History size={16} /> History Log
-          </button>
-        </div>
-      </div>
 
       <div className="ws-content">
         {activeTab === 'active' ? (
@@ -1122,9 +634,9 @@ const StoreWorkSheet = () => {
                     <tbody>
                       {filteredItems.length > 0 ? (
                         filteredItems.map(item => {
-                          const currentUnit = itemUnits[item.id] || normalizeUnit(item.unit);
-                          const unitStep = getUnitStep(currentUnit);
-                          const unitPlaceholder = getUnitPlaceholder(currentUnit);
+                          const unitBadgeClass = item.unit === 'Weight' ? 'weight' : 'piece';
+                          const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pieces';
+                          const unitPlaceholder = item.unit === 'Weight' ? '0.00' : '0';
 
                           return (
                             <tr key={item.id}>
@@ -1132,40 +644,9 @@ const StoreWorkSheet = () => {
                                 <span className="ws-item-name">{item.name}</span>
                               </td>
                               <td>
-                                <select
-                                  className={`ws-unit-select ${getUnitClass(currentUnit)}`}
-                                  value={currentUnit}
-                                  onChange={(e) => handleUnitChange(item.id, e.target.value)}
-                                >
-                                  {UNIT_OPTIONS.map(opt => (
-                                    <option key={opt.value} value={opt.value}>
-                                      {opt.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                {currentUnit === 'Tray' && (
-                                  <div style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '700' }}>KG/Tray:</span>
-                                    <input
-                                      type="number"
-                                      step="0.1"
-                                      min="0"
-                                      placeholder="e.g. 5"
-                                      value={trayWeights[item.id] ?? ''}
-                                      onChange={(e) => handleTrayWeightChange(item.id, e.target.value)}
-                                      style={{
-                                        width: '60px',
-                                        height: '24px',
-                                        padding: '2px 6px',
-                                        fontSize: '11px',
-                                        borderRadius: '6px',
-                                        border: '1.5px solid var(--primary-color)',
-                                        fontWeight: '700',
-                                        background: '#f0f9ff'
-                                      }}
-                                    />
-                                  </div>
-                                )}
+                                <span className={`ws-unit-badge ${unitBadgeClass}`}>
+                                  {unitLabel}
+                                </span>
                               </td>
                               {stores.map(store => {
                                 const itemQty = quantities[item.id]?.[store.id] ?? '';
@@ -1179,7 +660,7 @@ const StoreWorkSheet = () => {
                                         placeholder={unitPlaceholder}
                                         onChange={(e) => handleQtyChange(item.id, store.id, e.target.value)}
                                         min="0"
-                                        step={unitStep}
+                                        step={item.unit === 'Weight' ? '0.01' : '1'}
                                       />
                                     </div>
                                   </td>
@@ -1308,7 +789,6 @@ const StoreWorkSheet = () => {
       <AnimatePresence>
         {previewSheet && (() => {
           const wsQuantities = previewSheet.quantities || {};
-          const sheetUnits = previewSheet.itemUnits || {};
           
           // Calculate cumulative sums
           let overallSumWeight = 0;
@@ -1323,13 +803,12 @@ const StoreWorkSheet = () => {
             items.forEach(item => {
               const qty = Number(wsQuantities[item.id]?.[store.id] || 0);
               if (qty > 0) {
-                const currentUnit = sheetUnits[item.id] || itemUnits[item.id] || normalizeUnit(item.unit);
                 allocatedItems.push({
                   id: item.id,
                   name: item.name,
                   qty,
-                  unit: currentUnit,
-                  unitLabel: getUnitDisplayLabel(currentUnit),
+                  unit: item.unit,
+                  unitLabel: item.unit === 'Weight' ? 'KG' : 'Pcs',
                   isCompleted: !!(completedMap[item.id]?.[store.id])
                 });
               }
@@ -1359,8 +838,7 @@ const StoreWorkSheet = () => {
 
             if (itemTotal > 0) {
               totalActiveItems++;
-              const currentUnit = sheetUnits[item.id] || itemUnits[item.id] || normalizeUnit(item.unit);
-              if (currentUnit === 'KG') {
+              if (item.unit === 'Weight') {
                 overallSumWeight += itemTotal;
               } else {
                 overallSumPieces += itemTotal;
@@ -1369,8 +847,8 @@ const StoreWorkSheet = () => {
               consolidatedItems.push({
                 id: item.id,
                 name: item.name,
-                unit: currentUnit,
-                unitLabel: getUnitDisplayLabel(currentUnit),
+                unit: item.unit,
+                unitLabel: item.unit === 'Weight' ? 'KG' : 'Pcs',
                 total: itemTotal,
                 storeAllocations
               });
@@ -1395,66 +873,13 @@ const StoreWorkSheet = () => {
                       <p>Worksheet for {previewSheet.date}</p>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '8px', gap: '2px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setModalTab('overview')}
-                        style={{
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          fontWeight: '800',
-                          border: 'none',
-                          borderRadius: '6px',
-                          background: modalTab === 'overview' ? '#ffffff' : 'transparent',
-                          color: modalTab === 'overview' ? 'var(--primary-color)' : 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          boxShadow: modalTab === 'overview' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        📊 Overview
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setModalTab('stock')}
-                        style={{
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          fontWeight: '800',
-                          border: 'none',
-                          borderRadius: '6px',
-                          background: modalTab === 'stock' ? '#ffffff' : 'transparent',
-                          color: modalTab === 'stock' ? 'var(--primary-color)' : 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          boxShadow: modalTab === 'stock' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <Layers size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                        Stock Details
-                      </button>
-                    </div>
-                    <button className="ws-modal-close-btn" onClick={() => setPreviewSheet(null)}>
-                      <X size={20} />
-                    </button>
-                  </div>
+                  <button className="ws-modal-close-btn" onClick={() => setPreviewSheet(null)}>
+                    <X size={20} />
+                  </button>
                 </div>
 
                 {/* Modal Body */}
                 <div className="ws-modal-body">
-                  {modalTab === 'stock' ? (
-                    <WorksheetStockSection
-                      sheet={previewSheet}
-                      items={items}
-                      stores={stores}
-                      onSheetUpdated={(updatedSheet) => {
-                        setPreviewSheet(updatedSheet);
-                        setHistory(prev => prev.map(h => h.id === updatedSheet.id ? updatedSheet : h));
-                      }}
-                    />
-                  ) : (
-                    <>
                   {/* Quick Metrics row */}
                   <div className="ws-metrics-grid">
                     <div className="ws-metric-card">
@@ -1571,8 +996,6 @@ const StoreWorkSheet = () => {
                       )}
                     </div>
                   </div>
-                    </>
-                  )}
                 </div>
 
                 {/* Modal Footer */}

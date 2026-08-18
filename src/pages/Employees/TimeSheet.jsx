@@ -36,9 +36,9 @@ import {
   Edit,
   Save
 } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/Layout/Layout';
+import { printHTMLContent } from '../../context/PrinterContext';
 import './TimeSheet.css';
 
 const TimeSheet = () => {
@@ -286,8 +286,8 @@ const TimeSheet = () => {
     const debitAmount = debitedDays * perDayPay;
     const presentPay = paidDays * perDayPay;
 
-    const hasPerfectAttendance = present >= daysInMonth && absent === 0;
-    const bonus = hasPerfectAttendance ? (2 * perDayPay) : 0;
+    const acceptedLeavesDays = acceptedLeaves > 0 ? acceptedLeaves : 2;
+    const bonus = acceptedLeavesDays * perDayPay;
     
     const basicNetPay = Math.max(0, salary - debitAmount + bonus);
 
@@ -643,7 +643,7 @@ const TimeSheet = () => {
         </head>
         <body>
           <div class="header">
-            <h1>Ravi Sweets</h1>
+            <h1>Raju Ghee Sweets</h1>
             <p>Employee Monthly Salary Slip</p>
           </div>
 
@@ -753,20 +753,13 @@ const TimeSheet = () => {
 
           <div class="footer">
             <p>This is a computer generated document and does not require signature.</p>
-            <p>© ${selectedYear} Ravi Sweets. All rights reserved.</p>
+            <p>© ${selectedYear} Raju Ghee Sweets. All rights reserved.</p>
           </div>
         </body>
       </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'width=800,height=900');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 500);
+    printHTMLContent(printContent);
   };
 
   const filteredEmployees = employees.filter(emp => {
@@ -1240,7 +1233,7 @@ const TimeSheet = () => {
 
                 <div className="payslip-print-area">
                   <div className="payslip-brand">
-                    <h2>Ravi Sweets</h2>
+                    <h2>Raju Ghee Sweets</h2>
                     <p>Employee Monthly Payslip</p>
                   </div>
 

@@ -21,15 +21,16 @@ import {
   Edit,
   Eye,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Bluetooth,
   Usb,
   RefreshCw,
-  Layers,
-  CheckCircle2,
-  AlertCircle
+  Upload
 } from 'lucide-react';
-import { buildOrderESCPOS } from '../../utils/qzTray';
+import { uploadToImageKit } from '../../config/imagekit';
 import { usePrinter } from '../../context/PrinterContext';
+import { generateOrderReceiptHTML } from '../../utils/printReceiptHelper';
 import logo from '../../assets/logo.png';
 import { generateGSTInvoice } from '../../utils/invoice';
 import { db } from '../../config/firebase';
@@ -174,352 +175,6 @@ const CustomDropdown = ({ label, options, onSelect, selectedValue, placeholder, 
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-};
-
-// --- Accordion Stock Section Component ---
-const AccordionStockSection = ({ order, isMobile = false }) => {
-  const [recipes, setRecipes] = useState([]);
-  const [stockAssignments, setStockAssignments] = useState([]);
-  const [stockItems, setStockItems] = useState([]);
-  const [loadingStock, setLoadingStock] = useState(true);
-  const [updatingItems, setUpdatingItems] = useState({}); // { stockItemId: true }
-  const [updatingAll, setUpdatingAll] = useState(false);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [recipeSnap, assignSnap, stockSnap] = await Promise.all([
-          getDocs(collection(db, 'recipes')),
-          getDocs(collection(db, 'stock_assignments')),
-          getDocs(collection(db, 'stock_items'))
-        ]);
-        setRecipes(recipeSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setStockItems(stockSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (err) {
-        console.error('Failed to load stock data', err);
-      } finally {
-        setLoadingStock(false);
-      }
-    };
-    fetchData();
-  }, [order.id]);
-
-  // Build a map: for each order item, find its recipe, compute required stock
-  const computeStockNeeds = () => {
-    const needsMap = {}; // { stockItemId: { stockItemId, stockItemName, unit, totalQtyNeeded, currentQty, assignmentId } }
-    order.items.forEach(orderItem => {
-      // Match recipe by itemId (preferred) or fall back to name match for legacy recipes
-      const recipe = recipes.find(r =>
-        (r.itemId && r.itemId === orderItem.id) ||
-        (!r.itemId && r.name.toLowerCase().trim() === (orderItem.name || '').toLowerCase().trim())
-      );
-      if (!recipe || !recipe.ingredients) return;
-
-      recipe.ingredients.forEach(ing => {
-        if (!ing.stockItemId) return;
-        // Calculate required qty: ingredient qty * order item quantity (for weight items), or just ingredient qty for pieces
-        const multiplier = orderItem.unit === 'Weight' ? Number(orderItem.quantity) : Number(orderItem.quantity);
-        const requiredQty = Number(ing.qty) * multiplier;
-
-        if (!needsMap[ing.stockItemId]) {
-          // Find assignment (use first mUnit's assignment if multiple, or aggregate)
-          const assignments = stockAssignments.filter(a => a.stockItemId === ing.stockItemId);
-          const totalCurrentQty = assignments.reduce((sum, a) => sum + (a.currentQty || 0), 0);
-          const primaryAssignment = assignments[0];
-
-          needsMap[ing.stockItemId] = {
-            stockItemId: ing.stockItemId,
-            stockItemName: ing.stockItemName || stockItems.find(si => si.id === ing.stockItemId)?.name || 'Unknown',
-            unit: ing.unit || 'Weight',
-            totalQtyNeeded: 0,
-            currentQty: totalCurrentQty,
-            assignments: assignments,
-            primaryAssignment: primaryAssignment,
-            updated: order.stockUpdated?.[ing.stockItemId] || false
-          };
-        }
-        needsMap[ing.stockItemId].totalQtyNeeded += requiredQty;
-      });
-    });
-    return Object.values(needsMap);
-  };
-
-  const handleUpdateSingleStock = async (stockNeed) => {
-    if (stockNeed.updated) {
-      toast.error('Stock already updated for this item');
-      return;
-    }
-    setUpdatingItems(prev => ({ ...prev, [stockNeed.stockItemId]: true }));
-    try {
-      // Deduct from all assignments for this stock item proportionally
-      let remainingToDeduct = stockNeed.totalQtyNeeded;
-      for (const assignment of stockNeed.assignments) {
-        if (remainingToDeduct <= 0) break;
-        const deductFromThis = Math.min(assignment.currentQty || 0, remainingToDeduct);
-        const newQty = Math.max(0, (assignment.currentQty || 0) - deductFromThis);
-        await updateDoc(doc(db, 'stock_assignments', assignment.id), {
-          currentQty: newQty,
-          updatedAt: serverTimestamp()
-        });
-        remainingToDeduct -= deductFromThis;
-      }
-      // Mark this stock item as updated on the order
-      const orderRef = doc(db, 'orders', order.id);
-      await updateDoc(orderRef, {
-        [`stockUpdated.${stockNeed.stockItemId}`]: true,
-        updatedAt: serverTimestamp()
-      });
-      // Refresh stock assignments
-      const assignSnap = await getDocs(collection(db, 'stock_assignments'));
-      setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      toast.success(`Stock updated for ${stockNeed.stockItemName}`);
-    } catch (err) {
-      console.error('Stock update error:', err);
-      toast.error(`Failed to update stock for ${stockNeed.stockItemName}`);
-    } finally {
-      setUpdatingItems(prev => ({ ...prev, [stockNeed.stockItemId]: false }));
-    }
-  };
-
-  const handleUpdateAllStock = async () => {
-    const needs = computeStockNeeds();
-    const pendingNeeds = needs.filter(n => !n.updated);
-    if (pendingNeeds.length === 0) {
-      toast.error('All stock items already updated for this order');
-      return;
-    }
-    setUpdatingAll(true);
-    try {
-      const orderRef = doc(db, 'orders', order.id);
-      const updatesMap = {};
-      for (const stockNeed of pendingNeeds) {
-        let remainingToDeduct = stockNeed.totalQtyNeeded;
-        for (const assignment of stockNeed.assignments) {
-          if (remainingToDeduct <= 0) break;
-          const deductFromThis = Math.min(assignment.currentQty || 0, remainingToDeduct);
-          const newQty = Math.max(0, (assignment.currentQty || 0) - deductFromThis);
-          await updateDoc(doc(db, 'stock_assignments', assignment.id), {
-            currentQty: newQty,
-            updatedAt: serverTimestamp()
-          });
-          remainingToDeduct -= deductFromThis;
-        }
-        updatesMap[`stockUpdated.${stockNeed.stockItemId}`] = true;
-      }
-      await updateDoc(orderRef, { ...updatesMap, updatedAt: serverTimestamp() });
-      const assignSnap = await getDocs(collection(db, 'stock_assignments'));
-      setStockAssignments(assignSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      toast.success('All stock items updated successfully!');
-    } catch (err) {
-      console.error('Update all stock error:', err);
-      toast.error('Failed to update all stock');
-    } finally {
-      setUpdatingAll(false);
-    }
-  };
-
-  if (loadingStock) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}><div className="loader" style={{ borderBottomColor: 'var(--primary-color)', margin: '0 auto' }}></div></div>;
-  }
-
-  const stockNeeds = computeStockNeeds();
-  const allUpdated = stockNeeds.length > 0 && stockNeeds.every(n => n.updated);
-
-  if (isMobile) {
-    return (
-      <div className="ord-tab-panel animate-fade-in" style={{ fontSize: '12px' }}>
-        {stockNeeds.length === 0 ? (
-          <div className="ord-timeline-empty" style={{ padding: '20px', textAlign: 'center' }}>
-            <Layers size={28} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
-            <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>No recipes found for items in this order.</div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>Add recipes in Stock Analysis to enable stock tracking.</div>
-          </div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-                {stockNeeds.filter(n => n.updated).length}/{stockNeeds.length} updated
-              </span>
-              <button
-                onClick={handleUpdateAllStock}
-                disabled={updatingAll || allUpdated}
-                style={{
-                  padding: '5px 10px',
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: allUpdated ? '#d1fae5' : 'var(--primary-color)',
-                  color: allUpdated ? '#059669' : '#fff',
-                  cursor: allUpdated ? 'default' : 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '4px'
-                }}
-              >
-                {updatingAll ? <div className="loader" style={{ width: '10px', height: '10px', borderTopColor: '#fff' }}></div> : <CheckCircle2 size={12} />}
-                {allUpdated ? 'All Updated' : 'Update All'}
-              </button>
-            </div>
-            {stockNeeds.map(need => (
-              <div key={need.stockItemId} style={{
-                background: need.updated ? '#f0fdf4' : '#f8fafc',
-                border: '1px solid ' + (need.updated ? '#10b981' : 'var(--border-color)'),
-                borderRadius: '8px',
-                padding: '10px',
-                marginBottom: '8px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '800', fontSize: '12px', color: need.updated ? '#059669' : 'var(--text-primary)' }}>
-                      {need.updated && <CheckCircle2 size={11} style={{ marginRight: '4px', verticalAlign: 'middle', color: '#10b981' }} />}
-                      {need.stockItemName}
-                    </div>
-                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      Required: <strong>{need.totalQtyNeeded.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}</strong>
-                      &nbsp;|&nbsp;Available: <strong style={{ color: need.currentQty < need.totalQtyNeeded ? '#dc2626' : '#059669' }}>{need.currentQty.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}</strong>
-                    </div>
-                  </div>
-                  {!need.updated && (
-                    <button
-                      onClick={() => handleUpdateSingleStock(need)}
-                      disabled={updatingItems[need.stockItemId]}
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: '10px',
-                        fontWeight: '800',
-                        borderRadius: '6px',
-                        border: '1.5px solid var(--primary-color)',
-                        background: '#fff',
-                        color: 'var(--primary-color)',
-                        cursor: 'pointer',
-                        flexShrink: 0,
-                        display: 'flex', alignItems: 'center', gap: '3px'
-                      }}
-                    >
-                      {updatingItems[need.stockItemId] ? <div className="loader" style={{ width: '8px', height: '8px', borderTopColor: 'var(--primary-color)' }}></div> : null}
-                      Update
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-    );
-  }
-
-  // Desktop
-  return (
-    <div className="ord-tab-panel animate-fade-in" style={{ padding: '10px 0' }}>
-      {stockNeeds.length === 0 ? (
-        <div className="ord-timeline-empty" style={{ padding: '30px', textAlign: 'center' }}>
-          <Layers size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-secondary)' }}>No recipes found for items in this order.</div>
-          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>Go to Stock Analysis → Recipes to add recipes for your items.</div>
-        </div>
-      ) : (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h4 style={{ fontSize: '13px', color: 'var(--primary-color)', margin: 0 }}>
-              <Layers size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-              Stock Required for This Order
-            </h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                {stockNeeds.filter(n => n.updated).length} of {stockNeeds.length} updated
-              </span>
-              <button
-                onClick={handleUpdateAllStock}
-                disabled={updatingAll || allUpdated}
-                style={{
-                  padding: '6px 14px',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: allUpdated ? '#d1fae5' : 'var(--primary-color)',
-                  color: allUpdated ? '#059669' : '#fff',
-                  cursor: allUpdated ? 'default' : 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  transition: 'all 0.2s'
-                }}
-              >
-                {updatingAll ? <div className="loader" style={{ width: '12px', height: '12px', borderTopColor: '#fff' }}></div> : <CheckCircle2 size={13} />}
-                {allUpdated ? 'All Stock Updated' : 'Update All Stock'}
-              </button>
-            </div>
-          </div>
-          <table className="ord-items-subtable">
-            <thead>
-              <tr>
-                <th>Stock Item</th>
-                <th>Required Qty</th>
-                <th>Available Qty</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'center' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stockNeeds.map(need => (
-                <tr key={need.stockItemId} style={{ background: need.updated ? '#f0fdf410' : 'transparent' }}>
-                  <td style={{ fontWeight: '700' }}>
-                    {need.updated && <CheckCircle2 size={12} style={{ marginRight: '5px', verticalAlign: 'middle', color: '#10b981' }} />}
-                    {need.stockItemName}
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: '700', color: 'var(--primary-color)' }}>
-                      {need.totalQtyNeeded.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}
-                    </span>
-                  </td>
-                  <td>
-                    <span style={{ fontWeight: '700', color: need.currentQty < need.totalQtyNeeded ? '#dc2626' : '#059669' }}>
-                      {need.currentQty.toFixed(2)} {need.unit === 'Weight' ? 'kg' : 'pcs'}
-                    </span>
-                    {need.currentQty < need.totalQtyNeeded && (
-                      <span style={{ fontSize: '10px', color: '#dc2626', marginLeft: '6px', fontWeight: '700' }}>
-                        <AlertCircle size={10} style={{ verticalAlign: 'middle', marginRight: '2px' }} />Low
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    {need.updated ? (
-                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#059669', background: '#d1fae5', padding: '3px 8px', borderRadius: '5px' }}>✓ Updated</span>
-                    ) : (
-                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#92400e', background: '#fef3c7', padding: '3px 8px', borderRadius: '5px' }}>Pending</span>
-                    )}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    {!need.updated && (
-                      <button
-                        onClick={() => handleUpdateSingleStock(need)}
-                        disabled={updatingItems[need.stockItemId]}
-                        style={{
-                          padding: '5px 12px',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          borderRadius: '7px',
-                          border: '1.5px solid var(--primary-color)',
-                          background: '#fff',
-                          color: 'var(--primary-color)',
-                          cursor: 'pointer',
-                          display: 'inline-flex', alignItems: 'center', gap: '4px',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {updatingItems[need.stockItemId] ? <div className="loader" style={{ width: '10px', height: '10px', borderTopColor: 'var(--primary-color)' }}></div> : null}
-                        Update Stock
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
     </div>
   );
 };
@@ -942,6 +597,8 @@ const Orders = () => {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState('items'); // 'items' or 'summary'
+  const ITEMS_PER_PAGE = 45;
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [deliveryDateFilter, setDeliveryDateFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -951,6 +608,11 @@ const Orders = () => {
   const [accordionTabs, setAccordionTabs] = useState({}); // { [orderId]: 'items' | 'payment' | 'packing' }
   const getAccordionTab = (orderId) => accordionTabs[orderId] || 'items';
   const setAccordionTab = (orderId, tabName) => setAccordionTabs(prev => ({ ...prev, [orderId]: tabName }));
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, deliveryDateFilter, statusFilter, paymentStatusFilter, storeFilter]);
 
   // Date helper functions for filter shortcuts
   const getTodayStr = () => new Date().toISOString().split('T')[0];
@@ -984,6 +646,23 @@ const Orders = () => {
   const [globalDescription, setGlobalDescription] = useState('');
   const [mUnitDescription, setMUnitDescription] = useState('');
   const [pUnitDescription, setPUnitDescription] = useState('');
+  const [orderImageUrl, setOrderImageUrl] = useState('');
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+
+  const handleImageChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      setSelectedImageFile(file);
+      setImagePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImageFile(null);
+    setImagePreviewUrl('');
+    setOrderImageUrl('');
+  };
   const [paymentMode, setPaymentMode] = useState('Cash');
   const [receivedAmount, setReceivedAmount] = useState('');
   const [discount, setDiscount] = useState('');
@@ -1003,7 +682,8 @@ const Orders = () => {
     qzConnected,
     selectedQZPrinter,
     printRawBLE,
-    printRawUSB
+    printRawUSB,
+    printHTMLContent
   } = usePrinter();
 
   // Create Customer Modal State
@@ -1268,6 +948,16 @@ const Orders = () => {
     }));
   };
 
+  const setCartQuantity = (id, qty) => {
+    setCart(prev => prev.map(c => {
+      if (c.id === id) {
+        return { ...c, quantity: qty, total: qty * c.price };
+      }
+      return c;
+    }));
+  };
+
+
   const handleEditCartItem = (item) => {
     const originalItem = items.find(i => i.id === item.id);
     if (!originalItem) return;
@@ -1368,6 +1058,17 @@ const Orders = () => {
         }
       }
 
+      // Upload image to ImageKit on save if a new file was chosen
+      let finalImageUrl = orderImageUrl || '';
+      if (selectedImageFile) {
+        try {
+          finalImageUrl = await uploadToImageKit(selectedImageFile);
+        } catch (imgErr) {
+          console.error("ImageKit upload error during order save:", imgErr);
+          toast.error("Image upload failed. Saving order without new image.");
+        }
+      }
+
       const orderData = {
         orderId,
         serialNumber,
@@ -1381,11 +1082,18 @@ const Orders = () => {
         city: customer.city || '',
         state: customer.state || '',
         storeId: selectedStore,
-        storeName: store.name,
+        storeName: store?.name || '',
+        tradeName: store?.tradeName || store?.name || 'Raju Ghee Sweets',
+        storeGstNumber: store?.gstNumber || '',
+        storeAddress: store?.address || '',
+        storePhone: store?.phone || '',
+        storeCity: store?.city || '',
+        storeState: store?.state || '',
         pUnitId: selectedPUnit,
         globalDescription,
         mUnitDescription,
         pUnitDescription,
+        imageUrl: finalImageUrl,
         items: cart,
         discount: discountVal,
         totalAmount: totalAmt,
@@ -1440,6 +1148,9 @@ const Orders = () => {
     setGlobalDescription('');
     setMUnitDescription('');
     setPUnitDescription('');
+    setOrderImageUrl('');
+    setSelectedImageFile(null);
+    setImagePreviewUrl('');
     setCart([]);
     setPaymentMode('Cash');
     setReceivedAmount('');
@@ -1460,6 +1171,9 @@ const Orders = () => {
     setGlobalDescription(order.globalDescription || '');
     setMUnitDescription(order.mUnitDescription || '');
     setPUnitDescription(order.pUnitDescription || '');
+    setOrderImageUrl(order.imageUrl || '');
+    setSelectedImageFile(null);
+    setImagePreviewUrl(order.imageUrl || '');
     setPaymentMode(order.paymentMode || 'Cash');
     setReceivedAmount(order.receivedAmount !== undefined ? order.receivedAmount.toString() : '');
     setDiscount(order.discount !== undefined ? order.discount.toString() : '');
@@ -1502,229 +1216,13 @@ const Orders = () => {
     generateGSTInvoice(enrichedOrder);
   };
 
-  const handlePrintReceipt = (order) => {
-    const printContent = `
-      <html>
-        <head>
-          <title>Print Bill</title>
-          <style>
-            body { font-family: monospace; width: 300px; margin: 0 auto; padding: 20px; color: black; }
-            .center { text-align: center; }
-            .bold { font-weight: bold; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { text-align: left; padding: 4px 0; border-bottom: 1px dashed #ccc; font-size: 12px; }
-            .total { margin-top: 10px; text-align: right; font-weight: bold; font-size: 14px; }
-            .divider { border-bottom: 1px dashed black; margin: 10px 0; }
-            @media print {
-              body { width: 100%; margin: 0; padding: 0; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="center" style="margin-bottom: 8px;">
-            <img src="${logo}" alt="Logo" style="max-height: 50px; width: auto; object-fit: contain;" />
-          </div>
-          <div class="center bold" style="font-size: 18px;">Ravi Sweets</div>
-          <div class="center" style="font-size: 12px; margin-bottom: 10px;">${order.storeName}</div>
-          <div>Order: ${order.serialNumber ? `S${order.serialNumber}-${order.orderId}` : `#${order.orderId}`}</div>
-          <div>Date: ${order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString() : ''}</div>
-          <div>Customer: ${order.customerName}</div>
-          <div>Phone: ${order.customerPhone}</div>
-          <div class="divider"></div>
-          <table>
-            <tr>
-              <th>Item</th>
-              <th>Qty</th>
-              <th>Amt</th>
-            </tr>
-            ${order.items.map(item => `
-              <tr>
-                <td>${item.name}</td>
-                <td>${item.unit === 'Weight' ? item.quantity + 'kg' : item.quantity + 'pcs'}</td>
-                <td>₹${item.total.toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </table>
-          <div class="divider"></div>
-          <div style="font-size: 12px; line-height: 1.5; margin-top: 10px;">
-            ${Number(order.discount || 0) > 0 ? `
-            <div style="display: flex; justify-content: space-between;">
-              <span>Cart Total:</span>
-              <span>₹${(Number(order.totalAmount || 0) + Number(order.discount || 0)).toFixed(2)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; color: #dc2626;">
-              <span>Discount:</span>
-              <span>-₹${Number(order.discount || 0).toFixed(2)}</span>
-            </div>
-            ` : ''}
-            <div style="display: flex; justify-content: space-between;">
-              <span>Subtotal (Excl. Tax):</span>
-              <span>₹${(Number(order.totalAmount || 0) / 1.05).toFixed(2)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span>GST (5%):</span>
-              <span>₹${(Number(order.totalAmount || 0) - (Number(order.totalAmount || 0) / 1.05)).toFixed(2)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; border-top: 1px dashed #000; padding-top: 2px; margin-top: 2px;">
-              <span>GRAND TOTAL:</span>
-              <span class="bold">₹${Number(order.totalAmount || 0).toFixed(2)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
-              <span>ADVANCE PAID:</span>
-              <span>₹${Number(order.receivedAmount || 0).toFixed(2)}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; border-top: 1px solid #000; padding-top: 4px; margin-top: 4px;">
-              <span>BALANCE DUE:</span>
-              <span class="bold">₹${(Number(order.totalAmount || 0) - Number(order.receivedAmount || 0)).toFixed(2)}</span>
-            </div>
-          </div>
-          <div class="divider"></div>
-          <div class="center" style="font-size: 12px;">Thank you for your business!</div>
-          <div class="center" style="font-size: 12px; margin-top: 4px;">Please visit again.</div>
-        </body>
-      </html>
-    `;
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+  const handlePrintReceipt = async (order) => {
+    if (!order) return;
+    const printContent = generateOrderReceiptHTML(order);
+    await printHTMLContent(printContent, order);
   };
 
-  const printOrderDirectToBluetooth = async (order) => {
-    toast.loading("Sending order directly to Bluetooth thermal printer...", { id: 'bt-order-print-job' });
-
-    try {
-      const encoder = new TextEncoder();
-
-      // ESC/POS Commands
-      const INIT = new Uint8Array([0x1b, 0x40]);
-      const CENTER = new Uint8Array([0x1b, 0x61, 0x01]);
-      const LEFT = new Uint8Array([0x1b, 0x61, 0x00]);
-      const DOUBLE_SIZE = new Uint8Array([0x1d, 0x21, 0x11]);
-      const NORMAL_SIZE = new Uint8Array([0x1d, 0x21, 0x00]);
-      const BOLD_ON = new Uint8Array([0x1b, 0x45, 0x01]);
-      const BOLD_OFF = new Uint8Array([0x1b, 0x45, 0x00]);
-
-      let bytes = [];
-
-      bytes.push(...INIT);
-
-      // Header
-      bytes.push(...CENTER);
-      bytes.push(...DOUBLE_SIZE);
-      bytes.push(...encoder.encode("RAVI SWEETS\n"));
-      bytes.push(...NORMAL_SIZE);
-      bytes.push(...encoder.encode(`${order.storeName || 'Outlet Store'}\n`));
-      bytes.push(...encoder.encode("Quality Sweets & Savouries\n"));
-      bytes.push(...encoder.encode("--------------------------------\n"));
-
-      // Order Details
-      bytes.push(...LEFT);
-      bytes.push(...encoder.encode(`Order ID: ${order.serialNumber ? `S${order.serialNumber}-${order.orderId}` : `#${order.orderId}`}\n`));
-      bytes.push(...encoder.encode(`Customer: ${order.customerName}\n`));
-      bytes.push(...encoder.encode(`Phone: ${order.customerPhone}\n`));
-      bytes.push(...encoder.encode(`Date: ${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : (order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString() : '')}\n`));
-      bytes.push(...encoder.encode("--------------------------------\n"));
-
-      // Table Header
-      bytes.push(...BOLD_ON);
-      bytes.push(...encoder.encode("Item            Qty      Total  \n"));
-      bytes.push(...BOLD_OFF);
-      bytes.push(...encoder.encode("--------------------------------\n"));
-
-      // Items list
-      order.items.forEach(item => {
-        const qtyPart = (item.unit === 'Weight' ? `${item.quantity}kg` : `${item.quantity}pc`).padEnd(8, ' ');
-        const pricePart = `Rs.${Number(item.total).toFixed(0)}`.padStart(8, ' ');
-
-        const maxNameLen = 14;
-        let namePart1 = item.name;
-        let namePart2 = '';
-
-        if (namePart1.length > maxNameLen) {
-          namePart1 = item.name.substring(0, maxNameLen);
-          namePart2 = item.name.substring(maxNameLen);
-        }
-
-        bytes.push(...encoder.encode(`${namePart1.padEnd(14, ' ')} ${qtyPart} ${pricePart}\n`));
-
-        while (namePart2.length > 0) {
-          const chunk = namePart2.substring(0, maxNameLen);
-          bytes.push(...encoder.encode(`${chunk.padEnd(14, ' ')} ${"".padEnd(8, ' ')} ${"".padStart(8, ' ')}\n`));
-          namePart2 = namePart2.substring(maxNameLen);
-        }
-      });
-
-      bytes.push(...encoder.encode("--------------------------------\n"));
-
-      // Totals with GST details
-      const totalVal = Number(order.totalAmount || 0);
-      const discountVal = Number(order.discount || 0);
-      const grossTotal = totalVal + discountVal;
-      const subtotalVal = totalVal / 1.05;
-      const gstVal = totalVal - subtotalVal;
-      const advStr = `Rs.${Number(order.receivedAmount || 0).toFixed(2)}`;
-      const balStr = `Rs.${(totalVal - Number(order.receivedAmount || 0)).toFixed(2)}`;
-
-      if (discountVal > 0) {
-        bytes.push(...encoder.encode(`Cart Total: ${`Rs.${grossTotal.toFixed(2)}`.padStart(20, ' ')}\n`));
-        bytes.push(...encoder.encode(`Discount:   ${`-Rs.${discountVal.toFixed(2)}`.padStart(20, ' ')}\n`));
-      }
-      bytes.push(...encoder.encode(`Subtotal: ${`Rs.${subtotalVal.toFixed(2)}`.padStart(22, ' ')}\n`));
-      bytes.push(...encoder.encode(`GST (5%): ${`Rs.${gstVal.toFixed(2)}`.padStart(22, ' ')}\n`));
-      bytes.push(...BOLD_ON);
-      bytes.push(...encoder.encode(`GRAND TOTAL: ${`Rs.${totalVal.toFixed(2)}`.padStart(19, ' ')}\n`));
-      bytes.push(...BOLD_OFF);
-      bytes.push(...encoder.encode(`Advance Paid: ${advStr.padStart(18, ' ')}\n`));
-      bytes.push(...BOLD_ON);
-      bytes.push(...encoder.encode(`Balance Due: ${balStr.padStart(20, ' ')}\n`));
-      bytes.push(...BOLD_OFF);
-      bytes.push(...encoder.encode("--------------------------------\n"));
-
-      // Footer
-      bytes.push(...CENTER);
-      bytes.push(...encoder.encode("Thank you for your business!\n"));
-      bytes.push(...encoder.encode("Please visit again.\n\n"));
-
-      const CUT = new Uint8Array([0x1d, 0x56, 0x41, 0x00]);
-      bytes.push(...CUT);
-
-      const dataArray = new Uint8Array(bytes);
-
-      await printRawBLE(dataArray);
-
-      toast.dismiss('bt-order-print-job');
-      toast.success("Order receipt printed successfully!");
-    } catch (err) {
-      console.error("Direct BLE order print error: ", err);
-      toast.dismiss('bt-order-print-job');
-      toast.error("Failed to print directly. Opening system print fallback...");
-      handlePrintReceipt(order);
-    }
-  };
-
-  const handlePrint = async (order) => {
-    if (bluetoothConnected) {
-      printOrderDirectToBluetooth(order);
-    } else if (qzConnected && selectedQZPrinter) {
-      try {
-        toast.loading("Printing to USB printer via QZ Tray...", { id: 'qz-print' });
-        const bytes = buildOrderESCPOS(order);
-        await printRawUSB(bytes);
-        toast.dismiss('qz-print');
-        toast.success("Order printed successfully (USB)!");
-      } catch (err) {
-        console.error('QZ Print error:', err);
-        toast.dismiss('qz-print');
-        toast.error("USB print failed. Opening system print fallback...");
-        handlePrintReceipt(order);
-      }
-    } else {
-      handlePrintReceipt(order);
-    }
-  };
+  const handlePrint = handlePrintReceipt;
 
 
 
@@ -1851,209 +1349,153 @@ const Orders = () => {
     return matchesSearch && matchesDate && matchesStatus && matchesPaymentStatus && matchesStore;
   });
 
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE) || 1;
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredOrders.length);
+  const paginatedOrders = filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+
   return (
-    <div className="orders-container">
-      <div className="orders-header">
-        <div className="orders-header-info">
-          <h1>Customer Orders</h1>
-          <p>Track and manage customer sweet orders and factory production</p>
+    <div className="polaris-page-container">
+      {/* Polaris Header Bar */}
+
+      <div className="polaris-header-bar">
+        <div className="polaris-page-title-group">
+          <div className="polaris-page-title-icon">
+            <ShoppingBag size={24} />
+          </div>
+          <h1 className="polaris-page-title">Orders</h1>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <button className="add-order-btn" onClick={() => {
+        <div className="polaris-header-actions">
+          <button className="polaris-btn polaris-btn-primary" onClick={() => {
             resetForm();
             setShowAddModal(true);
           }}>
-            <Plus size={20} /> Create New Order
+            <Plus size={16} /> Create order
           </button>
         </div>
       </div>
 
-      <div className="ord-table-wrapper">
-        <div style={{ 
-          padding: '16px 20px', 
-          borderBottom: '1px solid var(--border-color)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '15px'
-        }}>
-          <div className="items-search-bar" style={{ maxWidth: '350px', flex: 1, margin: 0 }}>
-            <Search size={18} className="items-search-icon" />
+      {/* Polaris Top Metrics Summary Card */}
+      <div className="polaris-metrics-card">
+        <div className="polaris-metric-item">
+          <div className="polaris-metric-label">Total Orders</div>
+          <div className="polaris-metric-value">{orders.length}</div>
+          <div className="polaris-metric-subtext">All time customer orders</div>
+        </div>
+        <div className="polaris-metric-item">
+          <div className="polaris-metric-label">Active Processing</div>
+          <div className="polaris-metric-value">
+            {orders.filter(o => o.status !== 'Delivered').length}
+          </div>
+          <div className="polaris-metric-subtext">In production / ready</div>
+        </div>
+        <div className="polaris-metric-item">
+          <div className="polaris-metric-label">Completed & Delivered</div>
+          <div className="polaris-metric-value">
+            {orders.filter(o => o.status === 'Delivered').length}
+          </div>
+          <div className="polaris-metric-subtext">Successfully fulfilled</div>
+        </div>
+        <div className="polaris-metric-item">
+          <div className="polaris-metric-label">Total Value</div>
+          <div className="polaris-metric-value">
+            ₹{orders.reduce((acc, curr) => acc + (Number(curr.totalAmount) || 0), 0).toLocaleString('en-IN')}
+          </div>
+          <div className="polaris-metric-subtext">Gross sales revenue</div>
+        </div>
+      </div>
+
+      {/* Polaris Main Card Panel */}
+      <div className="polaris-card">
+        {/* Responsive Orders Filter Bar */}
+        <div className="ord-responsive-filter-bar">
+          <div className="ord-filter-search-wrap">
+            <Search size={15} style={{ color: '#64748b' }} />
             <input
               type="text"
-              placeholder="Search by Order ID or Customer..."
+              placeholder="Search by Order ID, Customer Name, or Phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>Status:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{
-                height: '38px',
-                padding: '0 12px',
-                border: '1px solid var(--border-color)',
-                borderRadius: '10px',
-                fontSize: '13px',
-                color: 'var(--text-primary)',
-                backgroundColor: '#ffffff',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              <option value="All">All Statuses</option>
-              <option value="new">New</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Partially Moved to Store">Partially Moved to Store</option>
-              <option value="Moved to Store">Moved to Store</option>
-              <option value="Partially Ready for Delivery">Partially Ready for Delivery</option>
-              <option value="Ready for Delivery">Ready for Delivery</option>
-              <option value="Delivered">Delivered</option>
-            </select>
-          </div>
+          <div className="ord-filter-controls-grid">
+            <div className="ord-filter-group">
+              <label>Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="All">All Statuses</option>
+                <option value="new">New</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Partially Moved to Store">Partially Moved</option>
+                <option value="Moved to Store">Moved to Store</option>
+                <option value="Partially Ready for Delivery">Partially Ready</option>
+                <option value="Ready for Delivery">Ready for Delivery</option>
+                <option value="Delivered">Delivered</option>
+              </select>
+            </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>Payment:</span>
-            <select
-              value={paymentStatusFilter}
-              onChange={(e) => setPaymentStatusFilter(e.target.value)}
-              style={{
-                height: '38px',
-                padding: '0 12px',
-                border: '1px solid var(--border-color)',
-                borderRadius: '10px',
-                fontSize: '13px',
-                color: 'var(--text-primary)',
-                backgroundColor: '#ffffff',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              <option value="All">All Payments</option>
-              <option value="Pending">Pending</option>
-              <option value="Partial">Partial</option>
-              <option value="Done">Done</option>
-            </select>
-          </div>
+            <div className="ord-filter-group">
+              <label>Payment</label>
+              <select
+                value={paymentStatusFilter}
+                onChange={(e) => setPaymentStatusFilter(e.target.value)}
+              >
+                <option value="All">All Payments</option>
+                <option value="Pending">Pending</option>
+                <option value="Partial">Partial</option>
+                <option value="Done">Done</option>
+              </select>
+            </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>Store:</span>
-            <select
-              value={storeFilter}
-              onChange={(e) => setStoreFilter(e.target.value)}
-              style={{
-                height: '38px',
-                padding: '0 12px',
-                border: '1px solid var(--border-color)',
-                borderRadius: '10px',
-                fontSize: '13px',
-                color: 'var(--text-primary)',
-                backgroundColor: '#ffffff',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              <option value="All">All Stores</option>
-              {stores.map(st => (
-                <option key={st.id} value={st.id}>{st.name}</option>
-              ))}
-            </select>
-          </div>
+            <div className="ord-filter-group">
+              <label>Store Outlet</label>
+              <select
+                value={storeFilter}
+                onChange={(e) => setStoreFilter(e.target.value)}
+              >
+                <option value="All">All Stores</option>
+                {stores.map(st => (
+                  <option key={st.id} value={st.id}>{st.name}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="ord-date-filter-container" style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '12px',
-            flexWrap: 'wrap'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <Calendar size={14} color="var(--primary-color)" /> Delivery Date:
-              </span>
+            <div className="ord-filter-group">
+              <label><Calendar size={12} /> Delivery Date</label>
               <input
                 type="date"
                 value={deliveryDateFilter}
                 onChange={(e) => setDeliveryDateFilter(e.target.value)}
-                style={{
-                  height: '38px',
-                  padding: '0 12px',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '10px',
-                  fontSize: '13px',
-                  color: 'var(--text-primary)',
-                  backgroundColor: '#ffffff',
-                  outline: 'none',
-                  transition: 'border-color 0.2s',
-                  fontWeight: '600'
-                }}
               />
             </div>
-            
-            <div style={{ display: 'flex', gap: '6px' }}>
+
+            <div className="ord-chip-bar">
               <button
                 type="button"
+                className={`ord-quick-chip ${deliveryDateFilter === getTodayStr() ? 'active' : ''}`}
                 onClick={() => setDeliveryDateFilter(getTodayStr())}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '20px',
-                  border: '1px solid ' + (deliveryDateFilter === getTodayStr() ? 'var(--primary-color)' : 'var(--border-color)'),
-                  background: deliveryDateFilter === getTodayStr() ? 'var(--primary-color)' : '#f8fafc',
-                  color: deliveryDateFilter === getTodayStr() ? '#ffffff' : 'var(--text-secondary)',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
               >
                 Today
               </button>
               <button
                 type="button"
+                className={`ord-quick-chip ${deliveryDateFilter === getTomorrowStr() ? 'active' : ''}`}
                 onClick={() => setDeliveryDateFilter(getTomorrowStr())}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '20px',
-                  border: '1px solid ' + (deliveryDateFilter === getTomorrowStr() ? 'var(--primary-color)' : 'var(--border-color)'),
-                  background: deliveryDateFilter === getTomorrowStr() ? 'var(--primary-color)' : '#f8fafc',
-                  color: deliveryDateFilter === getTomorrowStr() ? '#ffffff' : 'var(--text-secondary)',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
               >
                 Tomorrow
               </button>
               {deliveryDateFilter && (
                 <button
                   type="button"
+                  className="ord-quick-chip clear"
                   onClick={() => setDeliveryDateFilter('')}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '20px',
-                    border: '1px dashed var(--error-color)',
-                    background: '#fef2f2',
-                    color: 'var(--error-color)',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
                 >
-                  <X size={12} /> Clear
+                  <X size={12} /> Clear Date
                 </button>
               )}
             </div>
@@ -2061,6 +1503,8 @@ const Orders = () => {
         </div>
 
         <table className="ord-list-table">
+
+
           <thead>
             <tr>
               <th>Order ID</th>
@@ -2077,8 +1521,8 @@ const Orders = () => {
           <tbody>
             {loading ? (
               <tr><td colSpan="9" style={{ textAlign: 'center', padding: '100px' }}><div className="loader" style={{ borderBottomColor: 'var(--primary-color)' }}></div></td></tr>
-            ) : filteredOrders.length > 0 ? (
-              filteredOrders.map(order => (
+            ) : paginatedOrders.length > 0 ? (
+              paginatedOrders.map(order => (
                 <React.Fragment key={order.id}>
                   <tr className={expandedOrders.includes(order.id) ? "row-expanded" : ""}>
                     <td className="ord-id-cell">
@@ -2158,15 +1602,6 @@ const Orders = () => {
                               style={{ fontSize: '13px', padding: '8px 12px' }}
                             >
                               Payment History
-                            </button>
-                            <button
-                              type="button"
-                              className={`ord-preview-tab-btn ${getAccordionTab(order.id) === 'stock' ? 'active' : ''}`}
-                              onClick={() => setAccordionTab(order.id, 'stock')}
-                              style={{ fontSize: '13px', padding: '8px 12px' }}
-                            >
-                              <Layers size={13} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                              Stock Details
                             </button>
                           </div>
 
@@ -2293,11 +1728,6 @@ const Orders = () => {
                           {getAccordionTab(order.id) === 'payment' && (
                             <AccordionPaymentSection order={order} />
                           )}
-
-                          {/* Tab Panel: Stock Details */}
-                          {getAccordionTab(order.id) === 'stock' && (
-                            <AccordionStockSection order={order} />
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -2340,14 +1770,15 @@ const Orders = () => {
             )}
           </tbody>
         </table>
-      </div>
+
 
       {/* Mobile & Tablet Card View */}
+
       <div className="ord-mobile-cards-list">
         {loading ? (
           <div className="ord-portal-loading"><div className="loader" style={{ borderBottomColor: 'var(--primary-color)' }}></div></div>
-        ) : filteredOrders.length > 0 ? (
-          filteredOrders.map(order => {
+        ) : paginatedOrders.length > 0 ? (
+          paginatedOrders.map(order => {
             const isExpanded = expandedOrders.includes(order.id);
             return (
               <div key={order.id} className={`ord-mobile-card ${isExpanded ? 'expanded' : ''}`}>
@@ -2442,15 +1873,6 @@ const Orders = () => {
                         style={{ fontSize: '12px', padding: '6px 10px', flexShrink: 0 }}
                       >
                         Payment
-                      </button>
-                      <button
-                        type="button"
-                        className={`ord-preview-tab-btn ${getAccordionTab(order.id) === 'stock' ? 'active' : ''}`}
-                        onClick={() => setAccordionTab(order.id, 'stock')}
-                        style={{ fontSize: '12px', padding: '6px 10px', flexShrink: 0 }}
-                      >
-                        <Layers size={11} style={{ verticalAlign: 'middle', marginRight: '3px' }} />
-                        Stock
                       </button>
                     </div>
 
@@ -2579,29 +2001,107 @@ const Orders = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* Tab Panel: Payment Timeline */}
-                    {getAccordionTab(order.id) === 'payment' && (
-                      <AccordionPaymentSection order={order} isMobile={true} />
-                    )}
-
-                    {/* Tab Panel: Stock Details */}
-                    {getAccordionTab(order.id) === 'stock' && (
-                      <AccordionStockSection order={order} isMobile={true} />
-                    )}
                   </div>
                 )}
               </div>
             );
           })
-        ) : (
-          <div className="ord-orders-empty">
-            <Calendar size={36} style={{ margin: '0 auto 12px', opacity: 0.5, color: 'var(--primary-color)' }} />
-            <h3>No Orders Found</h3>
-            <p>Try adjusting your filters or date selection.</p>
+
+
+          ) : (
+            <div className="ord-orders-empty">
+              <Calendar size={36} style={{ margin: '0 auto 12px', opacity: 0.5, color: 'var(--primary-color)' }} />
+              <h3>No Orders Found</h3>
+              <p>Try adjusting your filters or date selection.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Pagination Bar (45 items per page) */}
+        {!loading && filteredOrders.length > 0 && (
+          <div className="ord-pagination-bar">
+            <div className="ord-pagination-info">
+              Showing <strong>{startIndex + 1}</strong>–<strong>{endIndex}</strong> of <strong>{filteredOrders.length}</strong> orders (Page {safeCurrentPage} of {totalPages})
+            </div>
+
+            {totalPages > 1 && (
+              <div className="ord-pagination-controls">
+                <button
+                  type="button"
+                  className="ord-page-btn"
+                  onClick={() => {
+                    setCurrentPage(prev => Math.max(1, prev - 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  disabled={safeCurrentPage === 1}
+                  title="Previous page"
+                >
+                  <ChevronLeft size={16} />
+                  <span>Prev</span>
+                </button>
+
+                <div className="ord-page-numbers">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(pageNum => {
+                      return (
+                        pageNum === 1 ||
+                        pageNum === totalPages ||
+                        Math.abs(pageNum - safeCurrentPage) <= 1
+                      );
+                    })
+                    .reduce((acc, pageNum, idx, arr) => {
+                      if (idx > 0 && pageNum - arr[idx - 1] > 1) {
+                        acc.push({ type: 'ellipsis', key: `ellipsis-${pageNum}` });
+                      }
+                      acc.push({ type: 'page', page: pageNum, key: `page-${pageNum}` });
+                      return acc;
+                    }, [])
+                    .map(item => {
+                      if (item.type === 'ellipsis') {
+                        return <span key={item.key} className="ord-page-ellipsis">...</span>;
+                      }
+                      return (
+                        <button
+                          key={item.key}
+                          type="button"
+                          className={`ord-page-number-btn ${safeCurrentPage === item.page ? 'active' : ''}`}
+                          onClick={() => {
+                            setCurrentPage(item.page);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                        >
+                          {item.page}
+                        </button>
+                      );
+                    })}
+                </div>
+
+                <button
+                  type="button"
+                  className="ord-page-btn"
+                  onClick={() => {
+                    setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  disabled={safeCurrentPage === totalPages}
+                  title="Next page"
+                >
+                  <span>Next</span>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+
+
+
+
+
+
+
 
       {/* Add Order Full Screen Modal */}
       <AnimatePresence>
@@ -2751,6 +2251,46 @@ const Orders = () => {
                       />
                     </div>
                   </div>
+
+                  {/* Order Image Upload Row */}
+                  <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>Order Reference Image (Optional)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <label style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 14px',
+                        background: 'var(--primary-color)',
+                        color: '#fff',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        opacity: submitting ? 0.7 : 1,
+                        transition: 'all 0.2s'
+                      }}>
+                        <Upload size={14} />
+                        Choose Image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          style={{ display: 'none' }}
+                          disabled={submitting}
+                        />
+                      </label>
+                      {imagePreviewUrl && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                          <img src={imagePreviewUrl} alt="Order reference" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px' }} />
+                          <a href={imagePreviewUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>View</a>
+                          <button type="button" onClick={handleRemoveImage} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }} title="Remove image">
+                            <X size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2808,18 +2348,50 @@ const Orders = () => {
                                 e.target.src = DEFAULT_ITEM_IMAGE;
                               }}
                             />
-                            {isInCart && (
+                            {isInCart && item.unit === 'Weight' && (
                               <div className="ord-card-cart-badge">
-                                {cartItem.quantity} {item.unit === 'Weight' ? 'kg' : 'pcs'}
+                                {cartItem.quantity} kg
                               </div>
                             )}
                           </div>
                           <div className="ord-item-details">
                             <h4>{item.name}</h4>
-                            <div className="ord-price-row">
-                              <span className="price">₹{item.price}</span>
-                              <span className="unit">{item.unit === 'Weight' ? '/ kg' : '/ piece'}</span>
-                            </div>
+                            {isInCart && item.unit !== 'Weight' ? (
+                              <div className="ord-card-qty-wrapper" onClick={(e) => e.stopPropagation()}>
+                                <button className="ord-card-qty-btn" onClick={() => updateCartQuantity(item.id, -1)} type="button">
+                                  <Minus size={12} />
+                                </button>
+                                <input
+                                  type="number"
+                                  className="ord-card-qty-input"
+                                  value={cartItem.quantity}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (!isNaN(val) && val >= 0) {
+                                      if (val === 0) {
+                                        removeFromCart(item.id);
+                                      } else {
+                                        setCartQuantity(item.id, val);
+                                      }
+                                    }
+                                  }}
+                                  onBlur={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (isNaN(val) || val < 1) {
+                                      setCartQuantity(item.id, 1);
+                                    }
+                                  }}
+                                />
+                                <button className="ord-card-qty-btn" onClick={() => updateCartQuantity(item.id, 1)} type="button">
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="ord-price-row">
+                                <span className="price">₹{item.price}</span>
+                                <span className="unit">{item.unit === 'Weight' ? '/ kg' : '/ piece'}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -2852,9 +2424,33 @@ const Orders = () => {
                           </button>
                         ) : (
                           <div className="ord-qty-controls">
-                            <button onClick={() => updateCartQuantity(item.id, -1)}><Minus size={12} /></button>
-                            <span>{item.quantity}</span>
-                            <button onClick={() => updateCartQuantity(item.id, 1)}><Plus size={12} /></button>
+                            <button onClick={() => updateCartQuantity(item.id, -1)} type="button">
+                              <Minus size={12} />
+                            </button>
+                            <input
+                              type="number"
+                              className="ord-qty-input"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (!isNaN(val) && val >= 0) {
+                                  if (val === 0) {
+                                    removeFromCart(item.id);
+                                  } else {
+                                    setCartQuantity(item.id, val);
+                                  }
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (isNaN(val) || val < 1) {
+                                  setCartQuantity(item.id, 1);
+                                }
+                              }}
+                            />
+                            <button onClick={() => updateCartQuantity(item.id, 1)} type="button">
+                              <Plus size={12} />
+                            </button>
                           </div>
                         )}
                         <div className="ord-item-price">
@@ -3011,69 +2607,6 @@ const Orders = () => {
                     onChange={(e) => handleWeightCalc('weight', e.target.value, showWeightModal.price)}
                   />
                 </div>
-
-                {/* Quick Weight Select */}
-                <div style={{ margin: '8px 0 12px 0', width: '100%', textAlign: 'left' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                    Quick Select Weight
-                  </label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                      {[
-                        { label: '1/4 kg', val: '0.25' },
-                        { label: '1/2 kg', val: '0.5' },
-                        { label: '3/4 kg', val: '0.75' },
-                        { label: '1 kg', val: '1' }
-                      ].map(sug => (
-                        <button
-                          key={sug.val}
-                          type="button"
-                          onClick={() => handleWeightCalc('weight', sug.val, showWeightModal.price)}
-                          style={{
-                            padding: '7px 4px',
-                            borderRadius: '8px',
-                            border: weightInput.weight === sug.val ? '1.5px solid var(--primary-color)' : '1px solid var(--border-color)',
-                            background: weightInput.weight === sug.val ? 'var(--primary-color)' : '#f8fafc',
-                            color: weightInput.weight === sug.val ? '#ffffff' : 'var(--text-primary)',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {sug.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                      {[
-                        { label: '2 kg', val: '2' },
-                        { label: '3 kg', val: '3' },
-                        { label: '4 kg', val: '4' },
-                        { label: '5 kg', val: '5' }
-                      ].map(sug => (
-                        <button
-                          key={sug.val}
-                          type="button"
-                          onClick={() => handleWeightCalc('weight', sug.val, showWeightModal.price)}
-                          style={{
-                            padding: '7px 4px',
-                            borderRadius: '8px',
-                            border: weightInput.weight === sug.val ? '1.5px solid var(--primary-color)' : '1px solid var(--border-color)',
-                            background: weightInput.weight === sug.val ? 'var(--primary-color)' : '#f8fafc',
-                            color: weightInput.weight === sug.val ? '#ffffff' : 'var(--text-primary)',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {sug.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
                 <div style={{ textAlign: 'center', fontWeight: '700', opacity: 0.5 }}>OR</div>
                 <div className="ord-weight-input-group">
                   <label>Amount (₹)</label>
@@ -3145,7 +2678,7 @@ const Orders = () => {
                 <div className="ord-preview-body">
                   <div className="ord-preview-top" style={{ marginBottom: '15px' }}>
                     <div>
-                      <h3>Ravi Sweets</h3>
+                      <h3>Raju Ghee Sweets</h3>
                       <p>{previewOrder.storeName}</p>
                       <p style={{ marginTop: '6px' }}>
                         <strong>Order:</strong> {previewOrder.serialNumber ? `S${previewOrder.serialNumber}-${previewOrder.orderId}` : `#${previewOrder.orderId}`}
@@ -3168,6 +2701,14 @@ const Orders = () => {
                     {previewOrder.globalDescription && <p><strong>Global Note:</strong> {previewOrder.globalDescription}</p>}
                     {previewOrder.mUnitDescription && <p><strong>Mfg Note:</strong> {previewOrder.mUnitDescription}</p>}
                     {previewOrder.pUnitDescription && <p><strong>Pack Note:</strong> {previewOrder.pUnitDescription}</p>}
+                    {previewOrder.imageUrl && (
+                      <div style={{ marginTop: '8px' }}>
+                        <p style={{ margin: '0 0 4px 0' }}><strong>Order Attachment / Image:</strong></p>
+                        <a href={previewOrder.imageUrl} target="_blank" rel="noopener noreferrer">
+                          <img src={previewOrder.imageUrl} alt="Order reference attachment" style={{ maxWidth: '140px', maxHeight: '140px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                        </a>
+                      </div>
+                    )}
                   </div>
 
                   {/* Tabs Header */}

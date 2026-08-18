@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import PortalLayout from '../Shared/PortalLayout';
-import { buildBillESCPOS, buildOrderESCPOS } from '../../utils/qzTray';
+import { generateReceiptHTML, generateOrderReceiptHTML } from '../../utils/printReceiptHelper';
 import { usePrinter } from '../../context/PrinterContext';
+
+
+
 import logo from '../../assets/logo.png';
+import { uploadToImageKit } from '../../config/imagekit';
 import { db } from '../../config/firebase';
 import { 
   collection, 
@@ -57,8 +61,12 @@ import {
   History,
   ChevronRight,
   QrCode,
-  Camera
+  Camera,
+  Upload,
+  Barcode,
+  UserCheck
 } from 'lucide-react';
+
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import './StorePortal.css';
@@ -66,52 +74,6 @@ import '../../pages/Orders/Orders.css';
 import Payments from '../../pages/Payments/Payments';
 import { triggerWhatsAppOrderReady, triggerWhatsAppOrderConfirmation } from '../../utils/whatsapp';
 import { sendEventNotification } from '../../utils/notificationService';
-
-// Helper unit constants & utilities
-const UNIT_OPTIONS = [
-  { value: 'KG', label: 'KG' },
-  { value: 'Tray', label: 'Tray' },
-  { value: 'Piece', label: 'Piece' },
-  { value: 'litre', label: 'litre' }
-];
-
-const normalizeUnit = (unit) => {
-  if (!unit) return 'KG';
-  const u = String(unit).trim().toLowerCase();
-  if (u === 'weight' || u === 'kg' || u === 'kgs' || u === 'kilogram') return 'KG';
-  if (u === 'tray' || u === 'trays') return 'Tray';
-  if (u === 'piece' || u === 'pieces' || u === 'pcs' || u === 'pc') return 'Piece';
-  if (u === 'litre' || u === 'liter' || u === 'ltr' || u === 'litres' || u === 'liters') return 'litre';
-  return 'KG';
-};
-
-const getUnitDisplayLabel = (unit) => {
-  const norm = normalizeUnit(unit);
-  if (norm === 'KG') return 'KG';
-  if (norm === 'Tray') return 'Tray';
-  if (norm === 'Piece') return 'Pieces';
-  if (norm === 'litre') return 'litre';
-  return norm;
-};
-
-const getUnitStep = (unit) => {
-  const norm = normalizeUnit(unit);
-  return (norm === 'KG' || norm === 'litre') ? '0.01' : '1';
-};
-
-const getUnitPlaceholder = (unit) => {
-  const norm = normalizeUnit(unit);
-  return (norm === 'KG' || norm === 'litre') ? '0.00' : '0';
-};
-
-const getUnitClass = (unit) => {
-  const norm = normalizeUnit(unit);
-  if (norm === 'KG') return 'weight';
-  if (norm === 'Tray') return 'tray';
-  if (norm === 'Piece') return 'piece';
-  if (norm === 'litre') return 'litre';
-  return 'weight';
-};
 
 
 // --- Custom Searchable Dropdown ---
@@ -769,6 +731,20 @@ const StorePortal = () => {
   const [customers, setCustomers] = useState([]);
   const [customerSearch, setCustomerSearch] = useState('');
   const [customersLoading, setCustomersLoading] = useState(true);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [showCustDropdown, setShowCustDropdown] = useState(false);
+  const custDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (custDropdownRef.current && !custDropdownRef.current.contains(e.target)) {
+        setShowCustDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
 
   // Billing & POS State
   const [billingSubTab, setBillingSubTab] = useState('pos'); // 'pos' or 'bills'
@@ -778,16 +754,60 @@ const StorePortal = () => {
   const [cart, setCart] = useState([]);
   const [paymentMode, setPaymentMode] = useState('UPI');
   const [posDiscount, setPosDiscount] = useState('');
+  const [discountType, setDiscountType] = useState('percent'); // 'percent' (%) or 'amount' (₹)
+
   const [billingSearch, setBillingSearch] = useState('');
-  const [posCategoryFilter, setPosCategoryFilter] = useState('All');
-  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
-  const [posCustomerName, setPosCustomerName] = useState('');
-  const [posCustomerPhone, setPosCustomerPhone] = useState('');
-  const [cashReceived, setCashReceived] = useState('');
+  const [stBarcodeInput, setStBarcodeInput] = useState('');
+  const stBarcodeInputRef = useRef(null);
   const [showWeightModal, setShowWeightModal] = useState(null);
   const [weightInput, setWeightInput] = useState({ weight: '', amount: '' });
   const [submittingBill, setSubmittingBill] = useState(false);
   const [selectedReceiptBill, setSelectedReceiptBill] = useState(null); // receipt preview modal
+
+  const handleStBarcodeSubmit = (e) => {
+    if (e) e.preventDefault();
+    const cleanInput = stBarcodeInput.trim();
+    if (!cleanInput) return;
+
+    const parts = cleanInput.split('*');
+    const scannedCode = parts[0].trim();
+    const multiplier = parts.length > 1 ? parseFloat(parts[1]) : null;
+
+    const foundItem = storeItems.find(i => 
+      (i.barcode || i.barcodeId || '').toLowerCase() === scannedCode.toLowerCase() ||
+      i.id === scannedCode ||
+      i.name.toLowerCase() === scannedCode.toLowerCase()
+    );
+
+    if (foundItem) {
+      if (foundItem.unit === 'Weight') {
+        let weightInKg = 1;
+        if (multiplier) {
+          weightInKg = multiplier > 20 ? multiplier / 1000 : multiplier;
+        }
+        const amt = (weightInKg * foundItem.price).toFixed(2);
+        addToCart(foundItem, weightInKg.toFixed(3), amt);
+        toast.success(`Scanned: ${foundItem.name} (${weightInKg} kg)`);
+      } else {
+        const qty = multiplier ? Math.round(multiplier) : 1;
+        addToCart(foundItem, qty, foundItem.price * qty);
+        toast.success(`Scanned: ${foundItem.name} (${qty} pcs)`);
+      }
+    } else {
+      toast.error(`No item found matching Barcode ID: "${scannedCode}"`);
+    }
+
+    setStBarcodeInput('');
+    if (stBarcodeInputRef.current) stBarcodeInputRef.current.focus();
+  };
+
+  useEffect(() => {
+    if (tab === 'billing' && billingSubTab === 'pos' && stBarcodeInputRef.current) {
+      stBarcodeInputRef.current.focus();
+    }
+  }, [tab, billingSubTab]);
+
+
 
   // Shared Global Printer Connections
   const {
@@ -813,10 +833,12 @@ const StorePortal = () => {
     disconnectQZTray,
     printRawBLE,
     printRawUSB,
-    setSelectedQZPrinter,
+    printHTMLContent,
     showQZSetupGuide,
-    setShowQZSetupGuide
+    setShowQZSetupGuide,
+    qzConnectTimer
   } = usePrinter();
+
 
   // --- ADD ORDER FUNCTIONALITY STATES ---
   const [showAddModal, setShowAddModal] = useState(false);
@@ -835,6 +857,23 @@ const StorePortal = () => {
   const [globalDescription, setGlobalDescription] = useState('');
   const [mUnitDescription, setMUnitDescription] = useState('');
   const [pUnitDescription, setPUnitDescription] = useState('');
+  const [orderImageUrl, setOrderImageUrl] = useState('');
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('');
+
+  const handleImageChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      setSelectedImageFile(file);
+      setImagePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImageFile(null);
+    setImagePreviewUrl('');
+    setOrderImageUrl('');
+  };
   const [orderPaymentMode, setOrderPaymentMode] = useState('Cash');
   const [receivedAmount, setReceivedAmount] = useState('');
   const [orderDiscount, setOrderDiscount] = useState('');
@@ -871,7 +910,6 @@ const StorePortal = () => {
     return `${year}-${month}-${day}`;
   });
   const [wsQuantities, setWsQuantities] = useState({}); // { [itemId]: quantity }
-  const [wsItemUnits, setWsItemUnits] = useState({}); // { [itemId]: 'KG' | 'Tray' | 'Piece' | 'litre' }
   const [wsHistory, setWsHistory] = useState([]);
   const [wsItems, setWsItems] = useState([]);
   const [wsLoading, setWsLoading] = useState(false);
@@ -880,19 +918,6 @@ const StorePortal = () => {
   const [wsPreviewSheet, setWsPreviewSheet] = useState(null);
   const [activeWorksheet, setActiveWorksheet] = useState(null);
   const [wsSearch, setWsSearch] = useState('');
-
-  const handleWsUnitChange = async (itemId, newUnit) => {
-    setWsItemUnits(prev => ({
-      ...prev,
-      [itemId]: newUnit
-    }));
-    setWsItems(prev => prev.map(item => item.id === itemId ? { ...item, unit: newUnit } : item));
-    try {
-      await updateDoc(doc(db, 'items', itemId), { unit: newUnit });
-    } catch (err) {
-      console.error("Error updating item unit in Firestore:", err);
-    }
-  };
 
   // Store Scan QR Box states
   const [scanInput, setScanInput] = useState('');
@@ -1343,12 +1368,13 @@ const StorePortal = () => {
 
   const links = [
     { label: 'Orders', icon: <ShoppingBag size={20} />, path: `/store-portal/${id}/orders` },
+    { label: 'Barcode Billing', icon: <Barcode size={20} />, path: `/store-portal/${id}/billing` },
     { label: 'Customers', icon: <Users size={20} />, path: `/store-portal/${id}/customers` },
     { label: 'Payments', icon: <CreditCard size={20} />, path: `/store-portal/${id}/payments` },
     { label: 'Store Worksheet', icon: <ClipboardList size={20} />, path: `/store-portal/${id}/worksheet` },
-    { label: 'Billing & POS', icon: <CreditCard size={20} />, path: `/store-portal/${id}/billing` },
     { label: 'Scan Box', icon: <QrCode size={20} />, path: `/store-portal/${id}/scan` }
   ];
+
 
   // Helper function to match dates across local format variations securely
   const isSameDay = (billDateStr, selectedDateStr) => {
@@ -1473,14 +1499,6 @@ const StorePortal = () => {
 
   // Fetch Store Items & Bills for Billing Tab
   useEffect(() => {
-    // Real-time listener for Categories
-    const catQ = query(collection(db, 'categories'), orderBy('name', 'asc'));
-    const catUnsubscribe = onSnapshot(catQ, (snapshot) => {
-      setCategories(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      console.error("Categories listener error in StorePortal:", error);
-    });
-
     if (tab === 'billing') {
       console.log("Subscribing to global items in StorePortal...");
       const itemsQ = query(collection(db, 'items'));
@@ -1503,12 +1521,9 @@ const StorePortal = () => {
       });
 
       return () => {
-        catUnsubscribe();
         itemsUnsubscribe();
         billsUnsubscribe();
       };
-    } else {
-      return () => catUnsubscribe();
     }
   }, [id, tab]);
 
@@ -1542,6 +1557,16 @@ const StorePortal = () => {
       fetchModalData();
     }
   }, [showAddModal]);
+
+  if (!tab) return <Navigate to={`/store-portal/${id}/orders`} replace />;
+
+  if (loading) {
+    return (
+      <PortalLayout title="Store Portal" links={links}>
+        <div className="st-portal-loading"><div className="loader"></div></div>
+      </PortalLayout>
+    );
+  }
 
   // --- Accordion Controls for Orders ---
   const toggleOrderAccordion = (orderId) => {
@@ -1712,6 +1737,16 @@ const StorePortal = () => {
     }));
   };
 
+  const setOrderCartQuantity = (id, qty) => {
+    setOrderCart(prev => prev.map(c => {
+      if (c.id === id) {
+        return { ...c, quantity: qty, total: qty * c.price };
+      }
+      return c;
+    }));
+  };
+
+
   const handleEditCartItemOrder = (item) => {
     const originalItem = orderItems.find(i => i.id === item.id);
     if (!originalItem) return;
@@ -1770,6 +1805,9 @@ const StorePortal = () => {
     setGlobalDescription('');
     setMUnitDescription('');
     setPUnitDescription('');
+    setOrderImageUrl('');
+    setSelectedImageFile(null);
+    setImagePreviewUrl('');
     setOrderCart([]);
     setOrderPaymentMode('Cash');
     setReceivedAmount('');
@@ -1803,6 +1841,17 @@ const StorePortal = () => {
     setFormErrors({});
     setSavingOrder(true);
     try {
+      // Upload image to ImageKit on save if a new file was chosen
+      let finalImageUrl = orderImageUrl || '';
+      if (selectedImageFile) {
+        try {
+          finalImageUrl = await uploadToImageKit(selectedImageFile);
+        } catch (imgErr) {
+          console.error("ImageKit upload error during order save:", imgErr);
+          toast.error("Image upload failed. Saving order without new image.");
+        }
+      }
+
       let orderId = '';
       let serialNumber = 1;
       if (editingOrderId) {
@@ -1841,11 +1890,12 @@ const StorePortal = () => {
         city: customer.city || '',
         state: customer.state || '',
         storeId: id,
-        storeName: store?.name || 'Ravi Sweets',
+        storeName: store?.name || 'Raju Ghee Sweets',
         pUnitId: selectedPUnit,
         globalDescription,
         mUnitDescription,
         pUnitDescription,
+        imageUrl: finalImageUrl,
         items: orderCart,
         discount: discountVal,
         totalAmount: totalAmt,
@@ -1972,6 +2022,9 @@ const StorePortal = () => {
     setGlobalDescription(order.globalDescription || '');
     setMUnitDescription(order.mUnitDescription || '');
     setPUnitDescription(order.pUnitDescription || '');
+    setOrderImageUrl(order.imageUrl || '');
+    setSelectedImageFile(null);
+    setImagePreviewUrl(order.imageUrl || '');
     setOrderPaymentMode(order.paymentMode || 'Cash');
     setReceivedAmount(order.receivedAmount !== undefined ? order.receivedAmount.toString() : '');
     setOrderDiscount(order.discount !== undefined ? order.discount.toString() : '');
@@ -1994,248 +2047,13 @@ const StorePortal = () => {
     }
   };
 
-  const handlePrintOrderReceipt = (order) => {
-    const divider = '--------------------------------';
-    const printContent = `
-      <html>
-        <head>
-          <title>Order - ${order.serialNumber ? `S${order.serialNumber}-${order.orderId}` : `#${order.orderId}`}</title>
-          <style>
-            @page {
-              size: 80mm auto;
-              margin: 4mm 3mm;
-            }
-            * { box-sizing: border-box; }
-            body {
-              font-family: 'Courier New', Courier, monospace;
-              font-size: 12px;
-              width: 72mm;
-              max-width: 72mm;
-              margin: 0 auto;
-              padding: 0;
-              color: #000;
-              background: #fff;
-            }
-            .center { text-align: center; }
-            .right { text-align: right; }
-            .bold { font-weight: bold; }
-            .store-name { font-size: 16px; font-weight: bold; text-align: center; margin: 4px 0 2px; }
-            .store-sub { font-size: 11px; text-align: center; margin-bottom: 6px; }
-            .divider { border: none; border-top: 1px dashed #000; margin: 5px 0; }
-            .info-row { display: flex; justify-content: space-between; font-size: 11px; margin: 1px 0; }
-            table { width: 100%; border-collapse: collapse; margin: 4px 0; }
-            th { font-size: 11px; font-weight: bold; text-align: left; padding: 2px 1px; border-bottom: 1px dashed #000; }
-            th.right, td.right { text-align: right; }
-            td { font-size: 11px; padding: 2px 1px; border-bottom: 1px dashed #eee; vertical-align: top; }
-            .total-section { margin-top: 6px; }
-            .total-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; padding: 3px 0; border-top: 1px solid #000; }
-            .footer { text-align: center; font-size: 11px; margin-top: 8px; }
-            @media print {
-              body { width: 72mm; }
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="center" style="margin-bottom: 4px;">
-            <img src="${logo}" alt="Logo" style="max-height: 40px; width: auto; object-fit: contain;" />
-          </div>
-          <div class="store-name">RAVI SWEETS</div>
-          <div class="store-sub">${order.storeName || 'Store'}</div>
-          <div class="store-sub">Quality Sweets & Savouries</div>
-          <hr class="divider">
-          <div class="info-row"><span><b>Order#:</b> ${order.serialNumber ? `S${order.serialNumber}-${order.orderId}` : order.orderId}</span><span>${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString('en-IN') : (order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString('en-IN') : '')}</span></div>
-          <div class="info-row"><span><b>Customer:</b> ${order.customerName}</span></div>
-          <div class="info-row"><span><b>Phone:</b> ${order.customerPhone}</span></div>
-          ${order.deliveryDate ? `<div class="info-row"><span><b>Delivery:</b> ${order.deliveryDate} ${order.deliveryTime || ''}</span></div>` : ''}
-          <hr class="divider">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:50%">Item</th>
-                <th class="right" style="width:25%">Qty</th>
-                <th class="right" style="width:25%">Amt</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${order.items.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td class="right">${item.unit === 'Weight' ? item.quantity + 'kg' : item.quantity + 'pc'}</td>
-                  <td class="right">Rs.${Number(item.total).toFixed(0)}</td>
-                </tr>
-                ${item.description ? `<tr><td colspan="3" style="font-size:10px;color:#555;padding-left:4px;">  ${item.description}</td></tr>` : ''}
-              `).join('')}
-            </tbody>
-          </table>
-          <hr class="divider">
-          ${Number(order.discount || 0) > 0 ? `
-            <div class="info-row" style="font-size:11px;"><span>Cart Total:</span><span>Rs.${(Number(order.totalAmount || 0) + Number(order.discount || 0)).toFixed(2)}</span></div>
-            <div class="info-row" style="font-size:11px; color: #dc2626;"><span>Discount:</span><span>-Rs.${Number(order.discount || 0).toFixed(2)}</span></div>
-          ` : ''}
-          <div class="info-row" style="font-size:11px;"><span>Subtotal (Excl. Tax):</span><span>Rs.${(Number(order.totalAmount || 0) / 1.05).toFixed(2)}</span></div>
-          <div class="info-row" style="font-size:11px;"><span>GST (5%):</span><span>Rs.${(Number(order.totalAmount || 0) - (Number(order.totalAmount || 0) / 1.05)).toFixed(2)}</span></div>
-          <div class="total-row"><span>GRAND TOTAL</span><span>Rs.${Number(order.totalAmount).toFixed(2)}</span></div>
-          <div class="info-row" style="font-size:11px;"><span>Received:</span><span>Rs.${Number(order.receivedAmount || 0).toFixed(2)}</span></div>
-          <div class="info-row" style="font-size:11px; font-weight: bold;"><span>Balance Due:</span><span>Rs.${(Number(order.totalAmount || 0) - Number(order.receivedAmount || 0)).toFixed(2)}</span></div>
-          <hr class="divider">
-          <div class="footer">Thank you for your business!</div>
-          <div class="footer">Please visit again.</div>
-          <br>
-        </body>
-      </html>
-    `;
-    const printWindow = window.open('', '_blank', 'width=420,height=700');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 400);
-  };
-
-  const printOrderDirectToBluetooth = async (order) => {
-    toast.loading("Sending order directly to Bluetooth thermal printer...", { id: 'bt-order-print-job' });
-
-    try {
-      const encoder = new TextEncoder();
-      
-      // ESC/POS Commands
-      const INIT = new Uint8Array([0x1b, 0x40]);
-      const CENTER = new Uint8Array([0x1b, 0x61, 0x01]);
-      const LEFT = new Uint8Array([0x1b, 0x61, 0x00]);
-      const DOUBLE_SIZE = new Uint8Array([0x1d, 0x21, 0x11]);
-      const NORMAL_SIZE = new Uint8Array([0x1d, 0x21, 0x00]);
-      const BOLD_ON = new Uint8Array([0x1b, 0x45, 0x01]);
-      const BOLD_OFF = new Uint8Array([0x1b, 0x45, 0x00]);
-      
-      let bytes = [];
-      
-      bytes.push(...INIT);
-      
-      // Header
-      bytes.push(...CENTER);
-      bytes.push(...DOUBLE_SIZE);
-      bytes.push(...encoder.encode("RAVI SWEETS\n"));
-      bytes.push(...NORMAL_SIZE);
-      bytes.push(...encoder.encode(`${order.storeName || 'Outlet Store'}\n`));
-      bytes.push(...encoder.encode("Quality Sweets & Savouries\n"));
-      bytes.push(...encoder.encode("--------------------------------\n"));
-      
-      // Order Details
-      bytes.push(...LEFT);
-      bytes.push(...encoder.encode(`Order ID: ${order.serialNumber ? `S${order.serialNumber}-${order.orderId}` : `#${order.orderId}`}\n`));
-      bytes.push(...encoder.encode(`Customer: ${order.customerName}\n`));
-      bytes.push(...encoder.encode(`Phone: ${order.customerPhone}\n`));
-      bytes.push(...encoder.encode(`Date: ${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : (order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString() : '')}\n`));
-      bytes.push(...encoder.encode("--------------------------------\n"));
-      
-      // Table Header
-      bytes.push(...BOLD_ON);
-      bytes.push(...encoder.encode("Item            Qty      Total  \n"));
-      bytes.push(...BOLD_OFF);
-      bytes.push(...encoder.encode("--------------------------------\n"));
-      
-      // Items list
-      order.items.forEach(item => {
-        const qtyPart = (item.unit === 'Weight' ? `${item.quantity}kg` : `${item.quantity}pc`).padEnd(8, ' ');
-        const pricePart = `Rs.${Number(item.total).toFixed(0)}`.padStart(8, ' ');
-
-        const maxNameLen = 14;
-        let namePart1 = item.name;
-        let namePart2 = '';
-
-        if (namePart1.length > maxNameLen) {
-          namePart1 = item.name.substring(0, maxNameLen);
-          namePart2 = item.name.substring(maxNameLen);
-        }
-
-        bytes.push(...encoder.encode(`${namePart1.padEnd(14, ' ')} ${qtyPart} ${pricePart}\n`));
-
-        while (namePart2.length > 0) {
-          const chunk = namePart2.substring(0, maxNameLen);
-          bytes.push(...encoder.encode(`${chunk.padEnd(14, ' ')} ${"".padEnd(8, ' ')} ${"".padStart(8, ' ')}\n`));
-          namePart2 = namePart2.substring(maxNameLen);
-        }
-      });
-
-      bytes.push(...encoder.encode("--------------------------------\n"));
-
-      // Totals with GST details
-      const totalVal = Number(order.totalAmount || 0);
-      const discountVal = Number(order.discount || 0);
-      const grossTotal = totalVal + discountVal;
-      const subtotalVal = totalVal / 1.05;
-      const gstVal = totalVal - subtotalVal;
-      const advStr = `Rs.${Number(order.receivedAmount || 0).toFixed(2)}`;
-      const balStr = `Rs.${(totalVal - Number(order.receivedAmount || 0)).toFixed(2)}`;
-
-      if (discountVal > 0) {
-        bytes.push(...encoder.encode(`${"Cart Total:".padEnd(22, ' ')}${`Rs.${grossTotal.toFixed(2)}`.padStart(10, ' ')}\n`));
-        bytes.push(...encoder.encode(`${"Discount:".padEnd(22, ' ')}${`-Rs.${discountVal.toFixed(2)}`.padStart(10, ' ')}\n`));
-      }
-      bytes.push(...encoder.encode(`Subtotal: ${`Rs.${subtotalVal.toFixed(2)}`.padStart(22, ' ')}\n`));
-      bytes.push(...encoder.encode(`GST (5%): ${`Rs.${gstVal.toFixed(2)}`.padStart(22, ' ')}\n`));
-      bytes.push(...BOLD_ON);
-      bytes.push(...encoder.encode(`GRAND TOTAL: ${`Rs.${totalVal.toFixed(2)}`.padStart(19, ' ')}\n`));
-      bytes.push(...BOLD_OFF);
-      bytes.push(...encoder.encode(`Advance Paid: ${advStr.padStart(18, ' ')}\n`));
-      bytes.push(...BOLD_ON);
-      bytes.push(...encoder.encode(`Balance Due: ${balStr.padStart(20, ' ')}\n`));
-      bytes.push(...BOLD_OFF);
-      bytes.push(...encoder.encode("--------------------------------\n"));
-      
-      // Footer
-      bytes.push(...CENTER);
-      bytes.push(...encoder.encode("Thank you for your business!\n"));
-      bytes.push(...encoder.encode("Please visit again.\n\n"));
-      
-      const CUT = new Uint8Array([0x1d, 0x56, 0x41, 0x00]);
-      bytes.push(...CUT);
-
-      const dataArray = new Uint8Array(bytes);
-      
-      await printRawBLE(dataArray);
-      
-      toast.dismiss('bt-order-print-job');
-      toast.success("Order receipt printed successfully!");
-    } catch (err) {
-      console.error("Direct BLE order print error: ", err);
-      toast.dismiss('bt-order-print-job');
-      toast.error("Failed to print directly. Opening system print fallback...");
-      handlePrintOrderReceipt(order);
-    }
-  };
-
   const handlePrintOrder = async (order) => {
-    // Priority 1: Bluetooth BLE direct
-    if (bluetoothConnected) {
-      printOrderDirectToBluetooth(order);
-      return;
-    }
-    // Priority 2: QZ Tray USB
-    if (qzConnected && selectedQZPrinter) {
-      try {
-        const bytes = buildOrderESCPOS(order);
-        await printRawUSB(bytes);
-        toast.success("Order printed successfully (USB)!");
-        return;
-      } catch (err) {
-        console.error('QZ Print error:', err);
-        let errorMsg = "USB print failed";
-        if (err.message && err.message.includes("not accepting job")) {
-          errorMsg = "Printer is offline or paused. Please check Windows Print Queue settings";
-        } else if (err.message) {
-          errorMsg = err.message;
-        }
-        toast.error(`${errorMsg}. Opening system print fallback...`, { duration: 6000 });
-        handlePrintOrderReceipt(order);
-      }
-    }
-    // Priority 3: System print dialog (80mm HTML)
-    handlePrintOrderReceipt(order);
+    if (!order) return;
+    const printContent = generateOrderReceiptHTML(order);
+    await printHTMLContent(printContent, order);
   };
+
+  const handlePrintOrderReceipt = handlePrintOrder;
 
   // --- POS Billing Logic ---
   const handleItemClick = (item) => {
@@ -2254,22 +2072,34 @@ const StorePortal = () => {
 
   const addToCart = (item, quantity, amount) => {
     const existingIndex = cart.findIndex(c => c.id === item.id);
-    if (existingIndex > -1 && item.unit !== 'Weight') {
-      setCart(cart.map((c, i) => i === existingIndex ? { ...c, quantity: c.quantity + quantity, total: (c.quantity + quantity) * c.price } : c));
-    } else if (existingIndex > -1 && item.unit === 'Weight') {
-      setCart(cart.map((c, i) => i === existingIndex ? { ...c, quantity, total: parseFloat(amount) } : c));
+    if (existingIndex > -1) {
+      setCart(prev => prev.map((c, i) => {
+        if (i === existingIndex) {
+          if (item.unit === 'Weight') {
+            const newWeight = (parseFloat(c.quantity) + parseFloat(quantity)).toFixed(3);
+            const newTotal = parseFloat(newWeight) * c.price;
+            return { ...c, quantity: newWeight, total: newTotal };
+          } else {
+            const newQty = parseInt(c.quantity) + parseInt(quantity);
+            const newTotal = newQty * c.price;
+            return { ...c, quantity: newQty, total: newTotal };
+          }
+        }
+        return c;
+      }));
     } else {
-      setCart([...cart, { 
+      setCart(prev => [...prev, { 
         id: item.id, 
         name: item.name, 
         price: item.price, 
         unit: item.unit,
-        quantity, 
+        quantity: item.unit === 'Weight' ? parseFloat(quantity).toFixed(3) : parseInt(quantity), 
         total: parseFloat(amount) 
       }]);
     }
-    toast.success(`${item.name} added to cart`);
+    toast.success(`${item.name} updated in cart`);
   };
+
 
   const updateQuantity = (itemId, delta, isWeight = false) => {
     setCart(prev => {
@@ -2308,44 +2138,6 @@ const StorePortal = () => {
     setShowWeightModal(null);
   };
 
-  const availableCategories = React.useMemo(() => {
-    const map = new Map();
-
-    categories.forEach(cat => {
-      if (cat.id && cat.name) {
-        map.set(cat.id, { id: cat.id, name: cat.name });
-      }
-    });
-
-    storeItems.forEach(item => {
-      if (item.categoryId && !map.has(item.categoryId)) {
-        const catObj = categories.find(c => c.id === item.categoryId);
-        map.set(item.categoryId, { id: item.categoryId, name: catObj ? catObj.name : (item.category || item.categoryId) });
-      } else if (item.category && typeof item.category === 'string' && item.category.trim() !== '') {
-        const existing = Array.from(map.values()).find(c => c.name.toLowerCase() === item.category.toLowerCase());
-        if (!existing) {
-          map.set(item.category, { id: item.category, name: item.category });
-        }
-      }
-    });
-
-    return Array.from(map.values());
-  }, [categories, storeItems]);
-
-  const matchesCategory = (item, catId) => {
-    if (catId === 'All') return true;
-
-    const targetCat = availableCategories.find(c => c.id === catId);
-    const targetName = targetCat ? (targetCat.name || '').toLowerCase() : catId.toLowerCase();
-
-    if (item.categoryId && item.categoryId === catId) return true;
-    if (item.category && item.category === catId) return true;
-    if (item.category && typeof item.category === 'string' && item.category.toLowerCase() === targetName) return true;
-    if (item.categoryName && typeof item.categoryName === 'string' && item.categoryName.toLowerCase() === targetName) return true;
-
-    return false;
-  };
-
   const generateBillId = () => {
     const now = new Date();
     const pad = (n) => n.toString().padStart(2, '0');
@@ -2356,34 +2148,51 @@ const StorePortal = () => {
     if (cart.length === 0) return toast.error("Your cart is empty");
     setSubmittingBill(true);
     try {
+      const selectedCustomerObj = customers.find(c => c.id === selectedCustomerId);
       const billId = generateBillId();
       const cartTotal = cart.reduce((sum, item) => sum + item.total, 0);
-      const discountVal = parseFloat(posDiscount) || 0;
+      const rawDiscount = parseFloat(posDiscount) || 0;
+      const discountVal = discountType === 'percent' ? (cartTotal * rawDiscount) / 100 : rawDiscount;
       const totalAmt = Math.max(0, cartTotal - discountVal);
+
+
       const billData = {
         billId,
         storeId: id,
-        storeName: store?.name || 'Ravi Sweets',
-        customerName: posCustomerName.trim() || 'Walk-in Customer',
-        customerPhone: posCustomerPhone.trim() || '',
+        storeName: store?.name || 'Raju Ghee Sweets',
+        tradeName: store?.tradeName || store?.name || 'Raju Ghee Sweets',
+        storeGstNumber: store?.gstNumber || '',
+        storeAddress: store?.address || '',
+        storePhone: store?.phone || '',
+        storeCity: store?.city || '',
+        storeState: store?.state || '',
+        customerId: selectedCustomerId || '',
+        customerName: selectedCustomerObj ? `${selectedCustomerObj.firstName} ${selectedCustomerObj.lastName || ''}`.trim() : 'Walk-in Customer',
+        customerPhone: selectedCustomerObj ? selectedCustomerObj.mobileNumber : '',
+        isB2B: selectedCustomerObj ? (selectedCustomerObj.isB2B || false) : false,
+        companyName: selectedCustomerObj ? (selectedCustomerObj.companyName || '') : '',
+        customerGst: selectedCustomerObj ? (selectedCustomerObj.gstNumber || selectedCustomerObj.gst || '') : '',
         items: cart,
         discount: discountVal,
         totalAmount: totalAmt,
         paymentMode,
+        status: 'settled',
         createdAt: serverTimestamp(),
-        date: new Date().toLocaleDateString()
+        date: new Date().toLocaleDateString('en-IN')
       };
       
-      await addDoc(collection(db, 'stores', id, 'bills'), billData);
+      const docRef = await addDoc(collection(db, 'bills'), billData);
+      await addDoc(collection(db, 'stores', id, 'bills'), { ...billData, id: docRef.id }).catch(() => {});
       toast.success(`Bill settled successfully: ${billId}`);
       
       setCart([]);
       setPosDiscount('');
-      setPosCustomerName('');
-      setPosCustomerPhone('');
-      setCashReceived('');
-      setShowCheckoutModal(false);
+      setSelectedCustomerId('');
       setSelectedReceiptBill(billData);
+      
+      // Auto-print receipt via USB/Bluetooth thermal printer or system dialog
+      handlePrintTrigger(billData);
+
     } catch (error) {
       console.error(error);
       toast.error("Failed to settle bill");
@@ -2392,237 +2201,14 @@ const StorePortal = () => {
     }
   };
 
-  const handlePrintReceipt = (bill) => {
-    // If Bluetooth Printer is active, simulate command printing before standard layout fallback
-    if (bluetoothConnected) {
-      toast.success(`Sending ticket roll data to ${connectedDevice}...`);
-    }
 
-    const printContent = `
-      <html>
-        <head>
-          <title>Invoice - ${bill.billId}</title>
-          <style>
-            @page {
-              size: 80mm auto;
-              margin: 4mm 3mm;
-            }
-            * { box-sizing: border-box; }
-            body {
-              font-family: 'Courier New', Courier, monospace;
-              font-size: 12px;
-              width: 72mm;
-              max-width: 72mm;
-              margin: 0 auto;
-              padding: 0;
-              color: #000;
-              background: #fff;
-            }
-            .center { text-align: center; }
-            .right { text-align: right; }
-            .store-name { font-size: 16px; font-weight: bold; text-align: center; margin: 4px 0 2px; }
-            .store-sub { font-size: 11px; text-align: center; margin-bottom: 3px; }
-            .divider { border: none; border-top: 1px dashed #000; margin: 5px 0; }
-            .info-row { display: flex; justify-content: space-between; font-size: 11px; margin: 1px 0; }
-            table { width: 100%; border-collapse: collapse; margin: 4px 0; }
-            th { font-size: 11px; font-weight: bold; text-align: left; padding: 2px 1px; border-bottom: 1px dashed #000; }
-            th.right, td.right { text-align: right; }
-            td { font-size: 11px; padding: 2px 1px; border-bottom: 1px dashed #eee; }
-            .total-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; padding: 4px 0; border-top: 1px solid #000; margin-top: 4px; }
-            .footer { text-align: center; font-size: 11px; margin-top: 6px; }
-            @media print {
-              body { width: 72mm; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="store-name">RAVI SWEETS</div>
-          <div class="store-sub">${bill.storeName || 'Outlet Store'}</div>
-          <div class="store-sub">Quality Sweets & Savouries</div>
-          <hr class="divider">
-          <div class="info-row"><span><b>Bill#:</b> ${bill.billId}</span><span>${bill.date}</span></div>
-          <div class="info-row"><span><b>Payment:</b> ${bill.paymentMode}</span><span><b>Status:</b> Paid</span></div>
-          <hr class="divider">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:50%">Item</th>
-                <th class="right" style="width:15%">Qty</th>
-                <th class="right" style="width:17%">Rate</th>
-                <th class="right" style="width:18%">Amt</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${bill.items.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td class="right">${item.unit === 'Weight' ? item.quantity + 'kg' : item.quantity + 'pc'}</td>
-                  <td class="right">Rs.${Number(item.price).toFixed(0)}</td>
-                  <td class="right">Rs.${Number(item.total).toFixed(0)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          <hr class="divider">
-          ${Number(bill.discount || 0) > 0 ? `
-            <div class="info-row"><span>Cart Total</span><span>Rs.${(Number(bill.totalAmount) + Number(bill.discount)).toFixed(2)}</span></div>
-            <div class="info-row" style="color: #dc2626;"><span>Discount</span><span>-Rs.${Number(bill.discount).toFixed(2)}</span></div>
-          ` : ''}
-          <div class="info-row"><span>Subtotal (Excl. Tax)</span><span>Rs.${(Number(bill.totalAmount) / 1.05).toFixed(2)}</span></div>
-          <div class="info-row"><span>GST (5%)</span><span>Rs.${(Number(bill.totalAmount) - (Number(bill.totalAmount) / 1.05)).toFixed(2)}</span></div>
-          <hr class="divider">
-          <div class="total-row"><span>GRAND TOTAL</span><span>Rs.${Number(bill.totalAmount).toFixed(2)}</span></div>
-          <hr class="divider">
-          <div class="footer">Thank you for shopping!</div>
-          <div class="footer">Please visit again.</div>
-          <br>
-        </body>
-      </html>
-    `;
-
-    const printWindow = window.open('', '_blank', 'width=420,height=700');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 500);
+  const handlePrintReceipt = async (bill) => {
+    if (!bill) return;
+    const printContent = generateReceiptHTML(bill);
+    await printHTMLContent(printContent, bill);
   };
 
-  const handlePrintTrigger = async (bill) => {
-    // Priority 1: Bluetooth BLE direct
-    if (bluetoothConnected) {
-      printDirectToBluetooth(bill);
-      return;
-    }
-    // Priority 2: QZ Tray USB
-    if (qzConnected && selectedQZPrinter) {
-      try {
-        const bytes = buildBillESCPOS(bill);
-        await printRawUSB(bytes);
-        toast.success("Printed bill successfully (USB)!");
-        return;
-      } catch (err) {
-        console.error('QZ print error:', err);
-        let errorMsg = "USB print failed";
-        if (err.message && err.message.includes("not accepting job")) {
-          errorMsg = "Printer is offline or paused. Please check Windows Print Queue settings";
-        } else if (err.message) {
-          errorMsg = err.message;
-        }
-        toast.error(`${errorMsg}. Opening system print fallback...`, { duration: 6000 });
-        handlePrintReceipt(bill);
-      }
-    }
-    // Priority 3: System print dialog (80mm HTML)
-    handlePrintReceipt(bill);
-  };
-
-  const printDirectToBluetooth = async (bill) => {
-    toast.loading("Sending receipt directly to Bluetooth thermal printer...", { id: 'bt-print-job' });
-
-    try {
-      const encoder = new TextEncoder();
-      
-      // ESC/POS Commands
-      const INIT = new Uint8Array([0x1b, 0x40]);
-      const CENTER = new Uint8Array([0x1b, 0x61, 0x01]);
-      const LEFT = new Uint8Array([0x1b, 0x61, 0x00]);
-      const DOUBLE_SIZE = new Uint8Array([0x1d, 0x21, 0x11]);
-      const NORMAL_SIZE = new Uint8Array([0x1d, 0x21, 0x00]);
-      const BOLD_ON = new Uint8Array([0x1b, 0x45, 0x01]);
-      const BOLD_OFF = new Uint8Array([0x1b, 0x45, 0x00]);
-      
-      let bytes = [];
-      
-      bytes.push(...INIT);
-      
-      // Header
-      bytes.push(...CENTER);
-      bytes.push(...DOUBLE_SIZE);
-      bytes.push(...encoder.encode("RAVI SWEETS\n"));
-      bytes.push(...NORMAL_SIZE);
-      bytes.push(...encoder.encode(`${bill.storeName || 'Outlet Store'}\n`));
-      bytes.push(...encoder.encode("Quality Sweets & Savouries\n"));
-      bytes.push(...encoder.encode("--------------------------------\n"));
-      
-      // Meta
-      bytes.push(...LEFT);
-      bytes.push(...encoder.encode(`Bill ID: ${bill.billId}\n`));
-      bytes.push(...encoder.encode(`Date: ${bill.date || new Date().toLocaleDateString()}\n`));
-      bytes.push(...encoder.encode(`Payment: ${bill.paymentMode || 'Cash'}\n`));
-      bytes.push(...encoder.encode("--------------------------------\n"));
-      
-      // Table Header
-      bytes.push(...BOLD_ON);
-      bytes.push(...encoder.encode("Item            Qty      Total  \n"));
-      bytes.push(...BOLD_OFF);
-      bytes.push(...encoder.encode("--------------------------------\n"));
-      
-      // Items list
-      bill.items.forEach(item => {
-        const qtyPart = (item.unit === 'Weight' ? `${item.quantity}kg` : `${item.quantity}pc`).padEnd(8, ' ');
-        const pricePart = `Rs.${Number(item.total).toFixed(0)}`.padStart(8, ' ');
-        
-        if (item.name.length > 14) {
-          // Print full name on its own line
-          bytes.push(...encoder.encode(`${item.name}\n`));
-          // Print quantity and price total aligned on the next line
-          const spacesPart = "".padEnd(14, ' ');
-          bytes.push(...encoder.encode(`${spacesPart} ${qtyPart} ${pricePart}\n`));
-        } else {
-          // Print name, quantity and price total aligned on a single line
-          const namePart = item.name.padEnd(14, ' ');
-          bytes.push(...encoder.encode(`${namePart} ${qtyPart} ${pricePart}\n`));
-        }
-      });
-      
-      // Grand Total with GST Details
-      const totalVal = Number(bill.totalAmount || 0);
-      const discountVal = Number(bill.discount || 0);
-      const grossTotal = totalVal + discountVal;
-      const subtotalVal = totalVal / 1.05;
-      const gstVal = totalVal - subtotalVal;
-
-      const subtotalStr = `Rs.${subtotalVal.toFixed(2)}`;
-      const gstStr = `Rs.${gstVal.toFixed(2)}`;
-      const grandTotalStr = `Rs.${totalVal.toFixed(2)}`;
-
-      if (discountVal > 0) {
-        bytes.push(...encoder.encode(`${"Cart Total:".padEnd(22, ' ')}${`Rs.${grossTotal.toFixed(2)}`.padStart(10, ' ')}\n`));
-        bytes.push(...encoder.encode(`${"Discount:".padEnd(22, ' ')}${`-Rs.${discountVal.toFixed(2)}`.padStart(10, ' ')}\n`));
-      }
-      bytes.push(...encoder.encode(`Subtotal (Excl. Tax): ${subtotalStr.padStart(10, ' ')}\n`));
-      bytes.push(...encoder.encode(`GST (5%):             ${gstStr.padStart(10, ' ')}\n`));
-      bytes.push(...encoder.encode("--------------------------------\n"));
-
-      bytes.push(...BOLD_ON);
-      bytes.push(...encoder.encode(`GRAND TOTAL: ${grandTotalStr.padStart(19, ' ')}\n`));
-      bytes.push(...BOLD_OFF);
-      bytes.push(...encoder.encode("--------------------------------\n"));
-      
-      // Footer
-      bytes.push(...CENTER);
-      bytes.push(...encoder.encode("Thank you for shopping!\n"));
-      bytes.push(...encoder.encode("Please visit again.\n\n"));
-      
-      const CUT = new Uint8Array([0x1d, 0x56, 0x41, 0x00]);
-      bytes.push(...CUT);
-
-      const dataArray = new Uint8Array(bytes);
-      
-      await printRawBLE(dataArray);
-      
-      toast.dismiss('bt-print-job');
-      toast.success("Receipt printed successfully!");
-    } catch (err) {
-      console.error("Direct BLE receipt print error: ", err);
-      toast.dismiss('bt-print-job');
-      toast.error("Failed to print directly. Opening system print fallback...");
-      handlePrintReceipt(bill);
-    }
-  };
+  const handlePrintTrigger = handlePrintReceipt;
 
 
   // --- Filtering Methods ---
@@ -2674,277 +2260,153 @@ const StorePortal = () => {
     }
   }
 
-  if (!tab) return <Navigate to={`/store-portal/${id}/orders`} replace />;
-
-  if (loading) {
-    return (
-      <PortalLayout title="Store Portal" links={links}>
-        <div className="st-portal-loading"><div className="loader"></div></div>
-      </PortalLayout>
-    );
-  }
-
   return (
     <PortalLayout title="Store Portal" links={links}>
-      <div className="st-portal-content">
+      <div className="polaris-page-container">
         
         {/* --- ORDERS VIEW --- */}
         {tab === 'orders' && (
           <div className="st-orders-view animate-fade-in">
-            <div className="st-view-header">
-              <div>
-                <h2>Store Orders ({orders.length})</h2>
-                <p className="st-view-desc">Monitor prep status and delivery schedules for this outlet</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <div className="st-search-wrapper">
-                  <Search size={18} className="st-search-icon" />
-                  <input 
-                    type="text" 
-                    placeholder="Search by Order ID or Customer..." 
-                    value={orderSearch}
-                    onChange={(e) => setOrderSearch(e.target.value)}
-                  />
+            {/* Polaris Header Bar */}
+            <div className="polaris-header-bar">
+              <div className="polaris-page-title-group">
+                <div className="polaris-title-icon-box">
+                  <ShoppingBag size={20} />
                 </div>
-                {/* Bluetooth Printer Button */}
-                <button 
-                  className="st-compact-bluetooth" 
-                  onClick={bluetoothConnected ? disconnectPrinter : handleBluetoothConnect}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    background: bluetoothConnected ? '#f0fdf4' : '#f1f5f9',
-                    padding: '8px 14px', borderRadius: '10px',
-                    border: '1px solid ' + (bluetoothConnected ? '#bbf7d0' : '#cbd5e1'),
-                    color: bluetoothConnected ? '#16a34a' : '#475569',
-                    fontSize: '12px', fontWeight: '700', cursor: 'pointer',
-                    transition: 'all 0.2s ease', height: '42px', boxSizing: 'border-box'
-                  }}
-                  title={bluetoothConnected ? `BT Connected: ${connectedDevice}. Click to disconnect.` : 'Connect Bluetooth Thermal Printer'}
-                >
-                  <Bluetooth size={16} className={bluetoothConnected ? 'connected' : 'disconnected'} />
-                  <span>{bluetoothConnected ? 'BT Connected' : 'BT Printer'}</span>
-                </button>
-                {/* QZ Tray USB Printer Button */}
-                <button
-                  onClick={qzConnected ? () => setShowQZModal(true) : connectQZTray}
-                  disabled={qzConnecting}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px',
-                    background: qzConnected ? '#eff6ff' : qzConnecting ? '#fefce8' : '#f1f5f9',
-                    padding: '8px 14px', borderRadius: '10px',
-                    border: '1px solid ' + (qzConnected ? '#bfdbfe' : qzConnecting ? '#fde68a' : '#cbd5e1'),
-                    color: qzConnected ? '#2563eb' : qzConnecting ? '#b45309' : '#475569',
-                    fontSize: '12px', fontWeight: '700',
-                    cursor: qzConnecting ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease', height: '42px', boxSizing: 'border-box',
-                    opacity: qzConnecting ? 0.85 : 1
-                  }}
-                  title={qzConnected ? `USB: ${selectedQZPrinter || 'No printer selected'}` : 'Connect USB Thermal Printer via QZ Tray'}
-                >
-                  {qzConnecting ? <RefreshCw size={15} className="spin-icon" /> : <Usb size={15} />}
-                  <span>{qzConnecting ? `Connecting... ${qzConnectTimer}s` : qzConnected ? 'USB Connected' : 'USB Printer'}</span>
-                </button>
-                <button className="add-order-btn" style={{ height: '42px' }} onClick={() => {
+                <div>
+                  <h1 className="polaris-page-title">Orders</h1>
+                </div>
+              </div>
+              <div className="polaris-header-actions">
+                <button className="polaris-btn-primary" onClick={() => {
                   resetFormOrder();
                   setShowAddModal(true);
                 }}>
-                  <Plus size={20} /> Create New Order
+                  <Plus size={16} />
+                  <span>Create order</span>
                 </button>
               </div>
             </div>
 
-            {/* Desktop Table View */}
-            <div className="ord-table-wrapper">
-              <div style={{ 
-                padding: '16px 20px', 
-                borderBottom: '1px solid var(--border-color)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '15px'
-              }}>
-                <div className="items-search-bar" style={{ maxWidth: '350px', flex: 1, margin: 0 }}>
-                  <Search size={18} className="items-search-icon" />
+            {/* Polaris 4 Metrics Cards */}
+            <div className="polaris-metrics-card">
+              <div className="polaris-metric-item">
+                <span className="polaris-metric-label">Total Orders</span>
+                <span className="polaris-metric-value">{orders.length}</span>
+                <span className="polaris-metric-subtext">All time store orders</span>
+              </div>
+              <div className="polaris-metric-item">
+                <span className="polaris-metric-label">Active Processing</span>
+                <span className="polaris-metric-value">{orders.filter(o => o.status !== 'Delivered' && o.status !== 'Completed').length}</span>
+                <span className="polaris-metric-subtext">In production / ready</span>
+              </div>
+              <div className="polaris-metric-item">
+                <span className="polaris-metric-label">Completed & Delivered</span>
+                <span className="polaris-metric-value">{orders.filter(o => o.status === 'Delivered' || o.status === 'Completed').length}</span>
+                <span className="polaris-metric-subtext">Successfully fulfilled</span>
+              </div>
+              <div className="polaris-metric-item">
+                <span className="polaris-metric-label">Total Value</span>
+                <span className="polaris-metric-value">₹{orders.reduce((sum, o) => sum + (Number(o.grandTotal) || 0), 0).toLocaleString()}</span>
+                <span className="polaris-metric-subtext">Gross sales revenue</span>
+              </div>
+            </div>
+
+            {/* Desktop Table View inside Polaris Card */}
+            <div className="polaris-card">
+              {/* Responsive Orders Filter Bar */}
+              <div className="ord-responsive-filter-bar">
+                <div className="ord-filter-search-wrap">
+                  <Search size={15} style={{ color: '#64748b' }} />
                   <input
                     type="text"
-                    placeholder="Search by Order ID or Customer..."
+                    placeholder="Search by Order ID, Customer Name, or Phone..."
                     value={orderSearch}
                     onChange={(e) => setOrderSearch(e.target.value)}
                   />
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>Status:</span>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    style={{
-                      height: '38px',
-                      padding: '0 12px',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '10px',
-                      fontSize: '13px',
-                      color: 'var(--text-primary)',
-                      backgroundColor: '#ffffff',
-                      outline: 'none',
-                      transition: 'border-color 0.2s',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="All">All Statuses</option>
-                    <option value="new">New</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Partially Moved to Store">Partially Moved to Store</option>
-                    <option value="Moved to Store">Moved to Store</option>
-                    <option value="Partially Ready for Delivery">Partially Ready for Delivery</option>
-                    <option value="Ready for Delivery">Ready for Delivery</option>
-                    <option value="Delivered">Delivered</option>
-                  </select>
-                </div>
+                <div className="ord-filter-controls-grid">
+                  <div className="ord-filter-group">
+                    <label>Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="All">All Statuses</option>
+                      <option value="new">New</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Partially Moved to Store">Partially Moved</option>
+                      <option value="Moved to Store">Moved to Store</option>
+                      <option value="Partially Ready for Delivery">Partially Ready</option>
+                      <option value="Ready for Delivery">Ready for Delivery</option>
+                      <option value="Delivered">Delivered</option>
+                    </select>
+                  </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>Payment:</span>
-                  <select
-                    value={paymentStatusFilter}
-                    onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                    style={{
-                      height: '38px',
-                      padding: '0 12px',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '10px',
-                      fontSize: '13px',
-                      color: 'var(--text-primary)',
-                      backgroundColor: '#ffffff',
-                      outline: 'none',
-                      transition: 'border-color 0.2s',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="All">All Payments</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Partial">Partial</option>
-                    <option value="Done">Done</option>
-                  </select>
-                </div>
+                  <div className="ord-filter-group">
+                    <label>Payment</label>
+                    <select
+                      value={paymentStatusFilter}
+                      onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                    >
+                      <option value="All">All Payments</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Partial">Partial</option>
+                      <option value="Done">Done</option>
+                    </select>
+                  </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>Store:</span>
-                  <select
-                    value={storeFilter}
-                    onChange={(e) => setStoreFilter(e.target.value)}
-                    style={{
-                      height: '38px',
-                      padding: '0 12px',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '10px',
-                      fontSize: '13px',
-                      color: 'var(--text-primary)',
-                      backgroundColor: '#ffffff',
-                      outline: 'none',
-                      transition: 'border-color 0.2s',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="All">All Stores</option>
-                    {stores.map(st => (
-                      <option key={st.id} value={st.id}>{st.name}</option>
-                    ))}
-                  </select>
-                </div>
+                  <div className="ord-filter-group">
+                    <label>Store Outlet</label>
+                    <select
+                      value={storeFilter}
+                      onChange={(e) => setStoreFilter(e.target.value)}
+                    >
+                      <option value="All">All Outlets</option>
+                      {stores.map(st => (
+                        <option key={st.id} value={st.id}>{st.name}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div className="ord-date-filter-container" style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '12px',
-                  flexWrap: 'wrap'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Calendar size={14} color="var(--primary-color)" /> Delivery Date:
-                    </span>
+                  <div className="ord-filter-group">
+                    <label><Calendar size={12} /> Delivery Date</label>
                     <input
                       type="date"
                       value={deliveryDateFilter}
                       onChange={(e) => setDeliveryDateFilter(e.target.value)}
-                      style={{
-                        height: '38px',
-                        padding: '0 12px',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '10px',
-                        fontSize: '13px',
-                        color: 'var(--text-primary)',
-                        backgroundColor: '#ffffff',
-                        outline: 'none',
-                        transition: 'border-color 0.2s',
-                        fontWeight: '600'
-                      }}
                     />
                   </div>
-                  
-                  <div style={{ display: 'flex', gap: '6px' }}>
+
+                  <div className="ord-chip-bar">
                     <button
                       type="button"
+                      className={`ord-quick-chip ${deliveryDateFilter === getTodayStr() ? 'active' : ''}`}
                       onClick={() => setDeliveryDateFilter(getTodayStr())}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '20px',
-                        border: '1px solid ' + (deliveryDateFilter === getTodayStr() ? 'var(--primary-color)' : 'var(--border-color)'),
-                        background: deliveryDateFilter === getTodayStr() ? 'var(--primary-color)' : '#f8fafc',
-                        color: deliveryDateFilter === getTodayStr() ? '#ffffff' : 'var(--text-secondary)',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
                     >
                       Today
                     </button>
                     <button
                       type="button"
+                      className={`ord-quick-chip ${deliveryDateFilter === getTomorrowStr() ? 'active' : ''}`}
                       onClick={() => setDeliveryDateFilter(getTomorrowStr())}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '20px',
-                        border: '1px solid ' + (deliveryDateFilter === getTomorrowStr() ? 'var(--primary-color)' : 'var(--border-color)'),
-                        background: deliveryDateFilter === getTomorrowStr() ? 'var(--primary-color)' : '#f8fafc',
-                        color: deliveryDateFilter === getTomorrowStr() ? '#ffffff' : 'var(--text-secondary)',
-                        fontSize: '12px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
                     >
                       Tomorrow
                     </button>
                     {deliveryDateFilter && (
                       <button
                         type="button"
+                        className="ord-quick-chip clear"
                         onClick={() => setDeliveryDateFilter('')}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '20px',
-                          border: '1px dashed var(--error-color)',
-                          background: '#fef2f2',
-                          color: 'var(--error-color)',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
                       >
-                        <X size={12} /> Clear
+                        <X size={12} /> Clear Date
                       </button>
                     )}
                   </div>
                 </div>
               </div>
+
 
               <table className="ord-list-table">
                 <thead>
@@ -3608,9 +3070,8 @@ const StorePortal = () => {
                       <tbody>
                         {filteredWsItems.length > 0 ? (
                           filteredWsItems.map(item => {
-                            const currentUnit = wsItemUnits[item.id] || normalizeUnit(item.unit);
-                            const unitStep = getUnitStep(currentUnit);
-                            const unitPlaceholder = getUnitPlaceholder(currentUnit);
+                            const unitLabel = item.unit === 'Weight' ? 'KG' : 'Pieces';
+                            const unitPlaceholder = item.unit === 'Weight' ? '0.00' : '0';
                             const itemQty = wsQuantities[item.id] ?? '';
 
                             const isAllocationCompleted = !!(activeWorksheet?.completed?.[item.id]?.[id]);
@@ -3636,18 +3097,9 @@ const StorePortal = () => {
                                   )}
                                 </td>
                                 <td>
-                                  <select
-                                    className={`ws-unit-select ${getUnitClass(currentUnit)}`}
-                                    value={currentUnit}
-                                    onChange={(e) => handleWsUnitChange(item.id, e.target.value)}
-                                    disabled={isAllocationCompleted}
-                                  >
-                                    {UNIT_OPTIONS.map(opt => (
-                                      <option key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                      </option>
-                                    ))}
-                                  </select>
+                                  <span className={`ws-unit-badge ${item.unit === 'Weight' ? 'weight' : 'piece'}`}>
+                                    {unitLabel}
+                                  </span>
                                 </td>
                                 <td>
                                   <div className="ws-qty-input-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -3658,10 +3110,10 @@ const StorePortal = () => {
                                       placeholder={unitPlaceholder}
                                       onChange={(e) => handleWorksheetQtyChange(item.id, e.target.value)}
                                       min="0"
-                                      step={unitStep}
+                                      step={item.unit === 'Weight' ? '0.01' : '1'}
                                       disabled={isAllocationCompleted}
                                     />
-                                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{getUnitDisplayLabel(currentUnit)}</span>
+                                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{item.unit === 'Weight' ? 'KG' : 'Pcs'}</span>
                                   </div>
                                 </td>
                               </tr>
@@ -3831,23 +3283,46 @@ const StorePortal = () => {
               </div>
             </div>
 
-            {/* --- SUB TAB 1: POS BILLING FUNCTIONALITY --- */}
+            {/* --- SUB TAB 1: POS BILLING & BARCODE SCANNING --- */}
             {billingSubTab === 'pos' && (
-              <div className="st-pos-layout">
-                {/* POS Catalogue Panel (Full Width) */}
+              <>
+                {/* Fast USB Barcode Gun Scanner Input Bar */}
+                <form 
+                  onSubmit={handleStBarcodeSubmit}
+                  style={{
+                    background: '#ffffff',
+                    border: '1.5px solid var(--primary-color)',
+                    borderRadius: '12px',
+                    padding: '12px 18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '16px',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)'
+                  }}
+                >
+                  <Barcode size={22} color="var(--primary-color)" />
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '6px 12px' }}>
+                    <input 
+                      ref={stBarcodeInputRef}
+                      type="text" 
+                      placeholder="Scan Barcode / Enter BarcodeID*Qty (e.g. 890123456789*500)..."
+                      value={stBarcodeInput}
+                      onChange={(e) => setStBarcodeInput(e.target.value)}
+                      style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '14px', fontWeight: '600', width: '100%', color: '#0f172a' }}
+                    />
+                  </div>
+                  <button type="submit" className="st-print-invoice-btn" style={{ height: '38px', padding: '0 16px', fontSize: '13px', fontWeight: '800' }}>
+                    Scan & Add
+                  </button>
+                </form>
+
+                <div className="st-pos-layout">
+
+                {/* POS Catalogue Panel */}
                 <div className="st-pos-catalogue">
                   <div className="st-catalogue-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <h3>Product Catalogue</h3>
-                      <span className="st-cat-count-badge">
-                        {storeItems.filter(i => {
-                          const matchesSearch = (i.name || '').toLowerCase().includes(billingSearch.toLowerCase());
-                          const matchesCat = matchesCategory(i, posCategoryFilter);
-                          return matchesSearch && matchesCat;
-                        }).length} Items
-                      </span>
-                    </div>
-
+                    <h3>Product Catalogue</h3>
                     <div className="st-pos-search">
                       <Search size={16} />
                       <input 
@@ -3859,38 +3334,9 @@ const StorePortal = () => {
                     </div>
                   </div>
 
-                  {/* Category Filter Chips Bar */}
-                  <div className="st-category-chips-bar">
-                    <button 
-                      type="button"
-                      className={`st-cat-chip ${posCategoryFilter === 'All' ? 'active' : ''}`}
-                      onClick={() => setPosCategoryFilter('All')}
-                    >
-                      All Items ({storeItems.length})
-                    </button>
-                    {availableCategories.map(cat => {
-                      const count = storeItems.filter(i => matchesCategory(i, cat.id)).length;
-                      return (
-                        <button 
-                          key={cat.id} 
-                          type="button"
-                          className={`st-cat-chip ${posCategoryFilter === cat.id ? 'active' : ''}`}
-                          onClick={() => setPosCategoryFilter(cat.id)}
-                        >
-                          {cat.name} ({count})
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Products Grid */}
                   <div className="st-catalogue-grid">
                     {storeItems
-                      .filter(i => {
-                        const matchesSearch = (i.name || '').toLowerCase().includes(billingSearch.toLowerCase());
-                        const matchesCat = matchesCategory(i, posCategoryFilter);
-                        return matchesSearch && matchesCat;
-                      })
+                      .filter(i => (i.name || '').toLowerCase().includes(billingSearch.toLowerCase()))
                       .map(item => {
                         const inCart = cart.find(c => c.id === item.id);
                         return (
@@ -3938,275 +3384,313 @@ const StorePortal = () => {
                     )}
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* Centered Floating Bottom Flyout Bar when items are added */}
-            <AnimatePresence>
-              {cart.length > 0 && billingSubTab === 'pos' && !showCheckoutModal && (
-                <motion.div 
-                  className="st-cart-flyout-bar"
-                  initial={{ y: 80, opacity: 0, x: '-50%' }}
-                  animate={{ y: 0, opacity: 1, x: '-50%' }}
-                  exit={{ y: 80, opacity: 0, x: '-50%' }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                >
-                  <div className="flyout-cart-info">
-                    <div className="flyout-icon-box">
-                      <ShoppingBag size={20} />
-                      <span className="flyout-count-badge">
-                        {cart.reduce((sum, item) => sum + (item.unit === 'Weight' ? 1 : item.quantity), 0)}
-                      </span>
-                    </div>
-                    <div className="flyout-text">
-                      <span className="flyout-label">Total Payable</span>
-                      <span className="flyout-amount">
-                        ₹{Math.max(0, cart.reduce((sum, item) => sum + item.total, 0) - (parseFloat(posDiscount) || 0)).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flyout-right">
-                    <button className="flyout-checkout-btn" onClick={() => setShowCheckoutModal(true)}>
-                      <span>Checkout</span>
-                      <ArrowRight size={18} />
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Full Order Summary & Checkout Modal */}
-            <AnimatePresence>
-              {showCheckoutModal && (
-                <div className="pos-checkout-overlay">
-                  <motion.div 
-                    className="pos-checkout-modal"
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {/* Modal Header */}
-                    <div className="pos-checkout-header">
-                      <div className="checkout-header-title">
-                        <div className="header-icon"><ShoppingBag size={22} /></div>
-                        <div>
-                          <h2>Order Summary & Checkout</h2>
-                          <p>{cart.length} item type{cart.length > 1 ? 's' : ''} in cart &bull; {store?.name || 'Ravi Sweets'}</p>
+                {/* POS Summary Panel */}
+                <div className="st-pos-summary">
+                  <div className="st-summary-header" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3>Current Shopping Cart</h3>
+                      
+                      {/* Printer Status Triggers */}
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <div className="st-compact-bluetooth" onClick={bluetoothConnected ? disconnectPrinter : handleBluetoothConnect} style={{ cursor: 'pointer' }}>
+                          <Bluetooth size={13} className={bluetoothConnected ? 'connected' : 'disconnected'} />
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: bluetoothConnected ? '#10b981' : '#64748b' }}>
+                            {bluetoothConnected ? 'BT On' : 'BT'}
+                          </span>
+                        </div>
+                        <div className="st-compact-bluetooth"
+                          onClick={qzConnected ? () => setShowQZModal(true) : connectQZTray}
+                          style={{ cursor: qzConnecting ? 'wait' : 'pointer', background: qzConnected ? '#eff6ff' : undefined, border: qzConnected ? '1px solid #bfdbfe' : undefined }}>
+                          {qzConnecting ? <RefreshCw size={12} className="spin-icon" /> : <Usb size={12} style={{ color: qzConnected ? '#2563eb' : '#64748b' }} />}
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: qzConnected ? '#2563eb' : '#64748b' }}>
+                            {qzConnecting ? '...' : qzConnected ? 'USB On' : 'USB'}
+                          </span>
                         </div>
                       </div>
-
-                      <button className="pos-checkout-close" onClick={() => setShowCheckoutModal(false)} title="Close">
-                        <X size={22} />
-                      </button>
                     </div>
 
-                    {/* Modal Grid Body */}
-                    <div className="pos-checkout-body">
-                      {/* Left Column: Cart Items List */}
-                      <div className="pos-checkout-items-section">
-                        <div className="items-section-header">
-                          <h3>Itemized Cart List</h3>
-                          <button className="clear-cart-btn" onClick={() => setCart([])}>
-                            <Trash2 size={13} /> Clear Cart
-                          </button>
+                    {/* Active Printer Banner */}
+                    {(bluetoothConnected || qzConnected) && (
+                      <div className="st-bluetooth-banner" style={{ background: bluetoothConnected ? '#f0fdf4' : '#eff6ff', borderColor: bluetoothConnected ? '#bbf7d0' : '#bfdbfe' }}>
+                        <div className="st-banner-left">
+                          {bluetoothConnected ? <Bluetooth size={12} color="#16a34a" /> : <Usb size={12} color="#2563eb" />}
+                          <span style={{ color: bluetoothConnected ? '#16a34a' : '#2563eb' }}>
+                            {bluetoothConnected ? `BT: ${connectedDevice}` : `USB: ${selectedQZPrinter || 'No printer'}`}
+                          </span>
                         </div>
-
-                        <div className="checkout-items-scroll">
-                          {cart.map((item, idx) => (
-                            <div key={idx} className="checkout-item-card">
-                              <div className="item-main-info">
-                                <span className="item-name">{item.name}</span>
-                                <span className="item-unit-price">₹{item.price} / {item.unit === 'Weight' ? 'kg' : 'pc'}</span>
-                              </div>
-
-                              <div className="item-qty-actions">
-                                {item.unit === 'Weight' ? (
-                                  <div className="st-pos-qty-controls">
-                                    <button onClick={() => {
-                                      const matched = storeItems.find(si => si.id === item.id);
-                                      if (matched) handleItemClick(matched);
-                                    }} title="Edit Weight"><Scale size={12} /></button>
-                                    <span>{item.quantity} kg</span>
-                                  </div>
-                                ) : (
-                                  <div className="st-pos-qty-controls">
-                                    <button onClick={() => updateQuantity(item.id, -1)}><Minus size={12} /></button>
-                                    <span>{item.quantity}</span>
-                                    <button onClick={() => updateQuantity(item.id, 1)}><Plus size={12} /></button>
-                                  </div>
-                                )}
-                                <span className="item-total">₹{item.total.toFixed(2)}</span>
-                                <button className="remove-item-btn" onClick={() => setCart(cart.filter((_, i) => i !== idx))}>
-                                  <X size={14} />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                          {cart.length === 0 && (
-                            <div className="st-empty-cart">
-                              <ShoppingBag size={32} />
-                              <p>Your shopping cart is empty.</p>
-                            </div>
-                          )}
-                        </div>
+                        <button
+                          onClick={bluetoothConnected ? disconnectPrinter : disconnectQZTray}
+                          className="st-banner-disconnect-btn">
+                          Disconnect
+                        </button>
                       </div>
+                    )}
+                  </div>
 
-                      {/* Right Column: Customer Info, Payment Method & Settle Bill */}
-                      <div className="pos-checkout-payment-section">
-                        {/* Customer Information Inputs */}
-                        <div className="checkout-group">
-                          <label>Customer Details (Optional)</label>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            <input 
-                              type="text" 
-                              placeholder="Customer Name"
-                              value={posCustomerName}
-                              onChange={(e) => setPosCustomerName(e.target.value)}
-                              className="checkout-input"
-                            />
-                            <input 
-                              type="tel" 
-                              placeholder="Phone Number"
-                              value={posCustomerPhone}
-                              onChange={(e) => setPosCustomerPhone(e.target.value)}
-                              className="checkout-input"
-                            />
-                          </div>
-                        </div>
+                  {/* Customer Auto-Suggest Selector (Optional) */}
+                  <div style={{ padding: '10px 15px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <UserCheck size={14} /> Customer <span style={{ color: '#64748b', fontWeight: '500', fontSize: '10px' }}>(Optional)</span>
+                      </label>
+                    </div>
 
-                        {/* Discount Input */}
-                        <div className="checkout-group">
-                          <label>Discount Amount (₹)</label>
-                          <input 
-                            type="number"
-                            placeholder="0.00"
-                            value={posDiscount}
-                            onChange={(e) => setPosDiscount(e.target.value)}
-                            className="checkout-input bold-input"
-                          />
-                        </div>
+                    {(() => {
+                      const selectedCustomerObj = customers.find(c => c.id === selectedCustomerId);
+                      const filteredCusts = customers.filter(c => {
+                        const q = customerSearch.toLowerCase();
+                        return (c.firstName || '').toLowerCase().includes(q) ||
+                               (c.lastName || '').toLowerCase().includes(q) ||
+                               (c.mobileNumber || '').includes(q);
+                      });
 
-                        {/* Financial Breakdown */}
-                        {(() => {
-                          const cartTotal = cart.reduce((sum, item) => sum + item.total, 0);
-                          const discountVal = parseFloat(posDiscount) || 0;
-                          const totalAmt = Math.max(0, cartTotal - discountVal);
-                          const posSubtotal = totalAmt / 1.05;
-                          const posGst = totalAmt - posSubtotal;
-                          const cashVal = parseFloat(cashReceived) || 0;
-                          const changeToReturn = Math.max(0, cashVal - totalAmt);
-
-                          return (
-                            <div className="checkout-financial-summary">
-                              <div className="financial-row">
-                                <span>Cart Subtotal</span>
-                                <span>₹{cartTotal.toFixed(2)}</span>
-                              </div>
-                              {discountVal > 0 && (
-                                <div className="financial-row discount">
-                                  <span>Discount Applied</span>
-                                  <span>-₹{discountVal.toFixed(2)}</span>
+                      return (
+                        <div style={{ position: 'relative' }} ref={custDropdownRef}>
+                          {selectedCustomerObj ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#e6f4ea', border: '1px solid #a7f3d0', padding: '6px 10px', borderRadius: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <UserCheck size={14} color="#065f46" />
+                                <div>
+                                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#065f46' }}>
+                                    {selectedCustomerObj.firstName} {selectedCustomerObj.lastName || ''}
+                                  </div>
+                                  <div style={{ fontSize: '10px', color: '#047857' }}>
+                                    📱 {selectedCustomerObj.mobileNumber}
+                                  </div>
                                 </div>
-                              )}
-                              <div className="financial-row">
-                                <span>Subtotal (Excl. Tax)</span>
-                                <span>₹{posSubtotal.toFixed(2)}</span>
                               </div>
-                              <div className="financial-row">
-                                <span>GST (5%)</span>
-                                <span>₹{posGst.toFixed(2)}</span>
-                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => { setSelectedCustomerId(''); setCustomerSearch(''); }}
+                                style={{ background: 'none', border: 'none', color: '#047857', cursor: 'pointer', padding: '2px' }}
+                                title="Clear selected customer"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ position: 'relative' }}>
+                              <input 
+                                type="text" 
+                                placeholder="Search customer by name or phone..."
+                                value={customerSearch}
+                                onFocus={() => setShowCustDropdown(true)}
+                                onChange={(e) => {
+                                  setCustomerSearch(e.target.value);
+                                  setShowCustDropdown(true);
+                                }}
+                                style={{ height: '32px', padding: '0 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', width: '100%', boxSizing: 'border-box' }}
+                              />
 
-                              <div className="financial-grand-total">
-                                <span>Total Amount Payable</span>
-                                <span className="grand-val">₹{totalAmt.toFixed(2)}</span>
-                              </div>
-
-                              {paymentMode === 'Cash' && (
-                                <div style={{ marginTop: '10px', background: '#f8fafc', padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>Cash Received (₹)</label>
-                                    <input 
-                                      type="number" 
-                                      placeholder="e.g. 500"
-                                      value={cashReceived}
-                                      onChange={(e) => setCashReceived(e.target.value)}
-                                      style={{ width: '110px', height: '32px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border-color)', fontWeight: '700', fontSize: '13px' }}
-                                    />
-                                  </div>
-                                  {cashVal > 0 && (
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '800', color: changeToReturn > 0 ? '#16a34a' : '#64748b' }}>
-                                      <span>Change to Return</span>
-                                      <span>₹{changeToReturn.toFixed(2)}</span>
+                              {showCustDropdown && (
+                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.15)', zIndex: 100, maxHeight: '180px', overflowY: 'auto', marginTop: '4px' }}>
+                                  {filteredCusts.length > 0 ? (
+                                    filteredCusts.map(c => (
+                                      <div 
+                                        key={c.id}
+                                        onClick={() => {
+                                          setSelectedCustomerId(c.id);
+                                          setCustomerSearch(`${c.firstName} ${c.lastName || ''}`);
+                                          setShowCustDropdown(false);
+                                        }}
+                                        style={{ padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+                                      >
+                                        <div>
+                                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b' }}>
+                                            {c.firstName} {c.lastName || ''}
+                                          </div>
+                                          <div style={{ fontSize: '10px', color: '#64748b' }}>📱 {c.mobileNumber}</div>
+                                        </div>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div style={{ padding: '10px', color: '#94a3b8', fontSize: '11px', textAlign: 'center' }}>
+                                      No customer matches "{customerSearch}"
                                     </div>
                                   )}
                                 </div>
                               )}
                             </div>
-                          );
-                        })()}
-
-                        {/* Payment Mode Selector */}
-                        <div className="checkout-group">
-                          <label>Payment Method</label>
-                          <div className="checkout-payment-modes">
-                            {['UPI', 'Cash', 'Card', 'NetBanking'].map(mode => (
-                              <button 
-                                key={mode} 
-                                type="button"
-                                className={`checkout-mode-btn ${paymentMode === mode ? 'active' : ''}`}
-                                onClick={() => setPaymentMode(mode)}
-                              >
-                                {mode}
-                              </button>
-                            ))}
-                          </div>
+                          )}
                         </div>
+                      );
+                    })()}
+                  </div>
 
-                        {/* Printer Connection Status */}
-                        <div className="checkout-printer-bar">
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {bluetoothConnected ? <Bluetooth size={14} color="#16a34a" /> : <Usb size={14} color="#2563eb" />}
-                            <span style={{ fontSize: '12px', fontWeight: '700', color: '#1e293b' }}>
-                              {bluetoothConnected ? `BT: ${connectedDevice}` : qzConnected ? `USB: ${selectedQZPrinter}` : 'No Printer Connected'}
-                            </span>
-                          </div>
-                          <button 
-                            type="button" 
-                            className="printer-connect-link"
-                            onClick={() => setShowBluetoothModal(true)}
-                          >
-                            Configure Printer
-                          </button>
+                  {/* Items Count Header Bar */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#334155' }}>
+                      Total Items: <strong style={{ color: 'var(--primary-color)' }}>{cart.length}</strong>
+                    </span>
+                    <span style={{ fontSize: '10px', background: '#e0e7ff', color: '#3730a3', padding: '2px 8px', borderRadius: '12px', fontWeight: '800' }}>
+                      Units: {cart.reduce((sum, item) => sum + (item.unit === 'Weight' ? parseFloat(item.quantity) : parseInt(item.quantity)), 0).toFixed(cart.some(i => i.unit === 'Weight') ? 3 : 0)}
+                    </span>
+                  </div>
+
+                  <div className="st-summary-items">
+
+
+                    {cart.map((item, idx) => (
+                      <div key={idx} className="st-summary-row">
+                        <div className="st-summary-details">
+                          <span className="name">{item.name}</span>
+                          <span className="price-sub">₹{item.price} / {item.unit === 'Weight' ? 'kg' : 'pc'}</span>
                         </div>
+                        <div className="st-summary-actions">
+                          {item.unit === 'Weight' ? (
+                            <div className="st-pos-qty-controls">
+                              <button onClick={() => handleItemClick(storeItems.find(si => si.id === item.id))} title="Edit Weight"><Scale size={12} /></button>
+                              <span>{item.quantity}kg</span>
+                            </div>
+                          ) : (
+                            <div className="st-pos-qty-controls">
+                              <button onClick={() => updateQuantity(item.id, -1)}><Minus size={12} /></button>
+                              <span>{item.quantity}</span>
+                              <button onClick={() => updateQuantity(item.id, 1)}><Plus size={12} /></button>
+                            </div>
+                          )}
+                          <span className="total">₹{item.total.toFixed(2)}</span>
+                          <button className="remove-btn" onClick={() => setCart(cart.filter((_, i) => i !== idx))}><X size={14} /></button>
+                        </div>
+                      </div>
+                    ))}
+                    {cart.length === 0 && (
+                      <div className="st-empty-cart">
+                        <ShoppingBag size={32} />
+                        <p>Your shopping cart is empty.</p>
+                      </div>
+                    )}
+                  </div>
 
-                        {/* Modal Action Buttons */}
-                        <div className="checkout-modal-actions">
-                          <button 
-                            type="button" 
-                            className="checkout-cancel-btn"
-                            onClick={() => setShowCheckoutModal(false)}
+                  <div className="st-summary-settle">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '15px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>
+                          Discount ({discountType === 'percent' ? '%' : '₹'})
+                        </label>
+                        <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
+                          <button
+                            type="button"
+                            onClick={() => setDiscountType('percent')}
+                            style={{
+                              padding: '2px 8px',
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              border: 'none',
+                              background: discountType === 'percent' ? 'var(--primary-color)' : '#f1f5f9',
+                              color: discountType === 'percent' ? '#ffffff' : '#475569',
+                              cursor: 'pointer'
+                            }}
                           >
-                            Cancel
+                            %
                           </button>
-
-                          <button 
-                            type="button" 
-                            className="checkout-submit-btn"
-                            onClick={settleBill}
-                            disabled={submittingBill || cart.length === 0}
+                          <button
+                            type="button"
+                            onClick={() => setDiscountType('amount')}
+                            style={{
+                              padding: '2px 8px',
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              border: 'none',
+                              background: discountType === 'amount' ? 'var(--primary-color)' : '#f1f5f9',
+                              color: discountType === 'amount' ? '#ffffff' : '#475569',
+                              cursor: 'pointer'
+                            }}
                           >
-                            {submittingBill ? <div className="loader"></div> : <><Printer size={16} /> Complete & Print Bill</>}
+                            ₹
                           </button>
                         </div>
                       </div>
+                      <input 
+                        type="number"
+                        placeholder={discountType === 'percent' ? 'e.g. 10%' : 'e.g. 50'}
+                        value={posDiscount}
+                        onChange={(e) => setPosDiscount(e.target.value)}
+                        style={{
+                          height: '38px',
+                          padding: '0 12px',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          fontWeight: '700',
+                          width: '100%',
+                          boxSizing: 'border-box'
+                        }}
+                      />
                     </div>
-                  </motion.div>
+
+                    {(() => {
+                      const cartTotal = cart.reduce((sum, item) => sum + item.total, 0);
+                      const rawDiscount = parseFloat(posDiscount) || 0;
+                      const discountVal = discountType === 'percent' ? (cartTotal * rawDiscount) / 100 : rawDiscount;
+                      const totalAmt = Math.max(0, cartTotal - discountVal);
+                      const posSubtotal = totalAmt / 1.05;
+                      const posGst = totalAmt - posSubtotal;
+
+
+                      return (
+                        <>
+                          <div className="st-pos-breakdown" style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 0 10px 0', borderBottom: '1.5px dashed #cbd5e1', marginBottom: '10px' }}>
+                            {discountVal > 0 && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
+                                <span>Cart Total</span>
+                                <span>₹{cartTotal.toFixed(2)}</span>
+                              </div>
+                            )}
+                            {discountVal > 0 && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#dc2626', fontWeight: '700' }}>
+                                <span>Discount</span>
+                                <span>-₹{discountVal.toFixed(2)}</span>
+                              </div>
+                            )}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
+                              <span>Subtotal (Excl. Tax)</span>
+                              <span>₹{posSubtotal.toFixed(2)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
+                              <span>GST (5%)</span>
+                              <span>₹{posGst.toFixed(2)}</span>
+                            </div>
+                          </div>
+
+                          <div className="total-display" style={{ marginBottom: '15px' }}>
+                            <span>Grand Total (Incl. Tax)</span>
+                            <span className="amt">₹{totalAmt.toFixed(2)}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+
+                    <div className="payment-select">
+                      {['UPI', 'Cash', 'Card'].map(mode => (
+                        <button 
+                          key={mode} 
+                          className={`pay-mode-btn ${paymentMode === mode ? 'active' : ''}`}
+                          onClick={() => setPaymentMode(mode)}
+                        >
+                          {mode}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button 
+                      className="st-settle-btn" 
+                      onClick={settleBill} 
+                      disabled={submittingBill || cart.length === 0}
+                    >
+                      {submittingBill ? <div className="loader"></div> : 'Settle Bill & Settle'}
+                    </button>
+                  </div>
                 </div>
-              )}
-            </AnimatePresence>
+              </div>
+            </>
+          )}
+
+
+
 
             {/* --- SUB TAB 2: BILLS LIST WITH TODAY DATE FILTER DEFAULT --- */}
             {billingSubTab === 'bills' && (
@@ -4340,14 +3824,15 @@ const StorePortal = () => {
                     width: '100%',
                     maxWidth: '420px',
                     height: '46px',
-                    background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                    background: 'var(--primary-color, #0A2A1B)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '12px',
-                    fontWeight: '800',
+                    borderRadius: '8px',
+                    fontWeight: '700',
                     fontSize: '13px',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(109, 40, 217, 0.2)',
+                    boxShadow: '0 2px 6px rgba(10, 42, 27, 0.2)',
+
                     transition: 'all 0.2s',
                     boxSizing: 'border-box'
                   }}
@@ -4514,70 +3999,6 @@ const StorePortal = () => {
               <h3 className="modal-title">Calculate Weight Item</h3>
               <div className="access-modal-form">
                 <div><label>Weight (kg)</label><input type="number" step="0.001" value={weightInput.weight} onChange={(e) => handleWeightCalc('weight', e.target.value)} /></div>
-                
-                {/* Quick Weight Select */}
-                <div style={{ margin: '8px 0', width: '100%' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                    Quick Select Weight
-                  </label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                      {[
-                        { label: '1/4 kg', val: '0.25' },
-                        { label: '1/2 kg', val: '0.5' },
-                        { label: '3/4 kg', val: '0.75' },
-                        { label: '1 kg', val: '1' }
-                      ].map(sug => (
-                        <button
-                          key={sug.val}
-                          type="button"
-                          onClick={() => handleWeightCalc('weight', sug.val)}
-                          style={{
-                            padding: '7px 4px',
-                            borderRadius: '8px',
-                            border: weightInput.weight === sug.val ? '1.5px solid var(--primary-color)' : '1px solid var(--border-color)',
-                            background: weightInput.weight === sug.val ? 'var(--primary-color)' : '#f8fafc',
-                            color: weightInput.weight === sug.val ? '#ffffff' : 'var(--text-primary)',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {sug.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                      {[
-                        { label: '2 kg', val: '2' },
-                        { label: '3 kg', val: '3' },
-                        { label: '4 kg', val: '4' },
-                        { label: '5 kg', val: '5' }
-                      ].map(sug => (
-                        <button
-                          key={sug.val}
-                          type="button"
-                          onClick={() => handleWeightCalc('weight', sug.val)}
-                          style={{
-                            padding: '7px 4px',
-                            borderRadius: '8px',
-                            border: weightInput.weight === sug.val ? '1.5px solid var(--primary-color)' : '1px solid var(--border-color)',
-                            background: weightInput.weight === sug.val ? 'var(--primary-color)' : '#f8fafc',
-                            color: weightInput.weight === sug.val ? '#ffffff' : 'var(--text-primary)',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {sug.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
                 <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#64748b', fontSize: '12px' }}>OR</div>
                 <div><label>Budget Amount (₹)</label><input type="number" value={weightInput.amount} onChange={(e) => handleWeightCalc('amount', e.target.value)} /></div>
                 <div className="modal-actions">
@@ -4805,13 +4226,13 @@ const StorePortal = () => {
                   style={{ background: '#f1f5f9', color: '#475569' }}
                   onClick={async () => {
                     try {
-                      const printers = await listQZPrinters();
-                      setQzPrinters(printers);
+                      await connectQZTray();
                       toast.success('Printer list refreshed');
                     } catch (e) {
                       toast.error('Failed to refresh');
                     }
                   }}
+
                 >
                   <RefreshCw size={13} /> Refresh
                 </button>
@@ -4947,7 +4368,7 @@ const StorePortal = () => {
 
               <div className="receipt-print-area">
                 <div className="receipt-brand">
-                  <h2>Ravi Sweets</h2>
+                  <h2>Raju Ghee Sweets</h2>
                   <p>{selectedReceiptBill.storeName || 'Outlet Store'}</p>
                 </div>
 
@@ -5217,6 +4638,46 @@ const StorePortal = () => {
                       />
                     </div>
                   </div>
+
+                  {/* Order Image Upload Row */}
+                  <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>Order Reference Image (Optional)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <label style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 14px',
+                        background: 'var(--primary-color)',
+                        color: '#fff',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: savingOrder ? 'not-allowed' : 'pointer',
+                        opacity: savingOrder ? 0.7 : 1,
+                        transition: 'all 0.2s'
+                      }}>
+                        <Upload size={14} />
+                        Choose Image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          style={{ display: 'none' }}
+                          disabled={savingOrder}
+                        />
+                      </label>
+                      {imagePreviewUrl && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                          <img src={imagePreviewUrl} alt="Order reference" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px' }} />
+                          <a href={imagePreviewUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: '#2563eb', fontWeight: '700', textDecoration: 'none' }}>View</a>
+                          <button type="button" onClick={handleRemoveImage} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }} title="Remove image">
+                            <X size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div style={{ margin: '15px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -5274,18 +4735,50 @@ const StorePortal = () => {
                                 e.target.src = DEFAULT_ITEM_IMAGE;
                               }}
                             />
-                            {isInCart && (
+                            {isInCart && item.unit === 'Weight' && (
                               <div className="ord-card-cart-badge">
-                                {cartItem.quantity} {item.unit === 'Weight' ? 'kg' : 'pcs'}
+                                {cartItem.quantity} kg
                               </div>
                             )}
                           </div>
                           <div className="ord-item-details">
                             <h4>{item.name}</h4>
-                            <div className="ord-price-row">
-                              <span className="price">₹{item.price}</span>
-                              <span className="unit">{item.unit === 'Weight' ? '/ kg' : '/ piece'}</span>
-                            </div>
+                            {isInCart && item.unit !== 'Weight' ? (
+                              <div className="ord-card-qty-wrapper" onClick={(e) => e.stopPropagation()}>
+                                <button className="ord-card-qty-btn" onClick={() => updateCartQuantityOrder(item.id, -1)} type="button">
+                                  <Minus size={12} />
+                                </button>
+                                <input
+                                  type="number"
+                                  className="ord-card-qty-input"
+                                  value={cartItem.quantity}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (!isNaN(val) && val >= 0) {
+                                      if (val === 0) {
+                                        removeFromCartOrder(item.id);
+                                      } else {
+                                        setOrderCartQuantity(item.id, val);
+                                      }
+                                    }
+                                  }}
+                                  onBlur={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (isNaN(val) || val < 1) {
+                                      setOrderCartQuantity(item.id, 1);
+                                    }
+                                  }}
+                                />
+                                <button className="ord-card-qty-btn" onClick={() => updateCartQuantityOrder(item.id, 1)} type="button">
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="ord-price-row">
+                                <span className="price">₹{item.price}</span>
+                                <span className="unit">{item.unit === 'Weight' ? '/ kg' : '/ piece'}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -5318,9 +4811,33 @@ const StorePortal = () => {
                           </button>
                         ) : (
                           <div className="ord-qty-controls">
-                            <button onClick={() => updateCartQuantityOrder(item.id, -1)}><Minus size={12} /></button>
-                            <span>{item.quantity}</span>
-                            <button onClick={() => updateCartQuantityOrder(item.id, 1)}><Plus size={12} /></button>
+                            <button onClick={() => updateCartQuantityOrder(item.id, -1)} type="button">
+                              <Minus size={12} />
+                            </button>
+                            <input
+                              type="number"
+                              className="ord-qty-input"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (!isNaN(val) && val >= 0) {
+                                  if (val === 0) {
+                                    removeFromCartOrder(item.id);
+                                  } else {
+                                    setOrderCartQuantity(item.id, val);
+                                  }
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (isNaN(val) || val < 1) {
+                                  setOrderCartQuantity(item.id, 1);
+                                }
+                              }}
+                            />
+                            <button onClick={() => updateCartQuantityOrder(item.id, 1)} type="button">
+                              <Plus size={12} />
+                            </button>
                           </div>
                         )}
                         <div className="ord-item-price">
@@ -5477,70 +4994,6 @@ const StorePortal = () => {
                     style={{ height: '38px', padding: '0 12px', border: '1px solid var(--border-color)', borderRadius: '8px' }}
                   />
                 </div>
-
-                {/* Quick Weight Select */}
-                <div style={{ margin: '8px 0 12px 0', width: '100%', textAlign: 'left' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                    Quick Select Weight
-                  </label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                      {[
-                        { label: '1/4 kg', val: '0.25' },
-                        { label: '1/2 kg', val: '0.5' },
-                        { label: '3/4 kg', val: '0.75' },
-                        { label: '1 kg', val: '1' }
-                      ].map(sug => (
-                        <button
-                          key={sug.val}
-                          type="button"
-                          onClick={() => handleOrderWeightCalc('weight', sug.val, showOrderWeightModal.price)}
-                          style={{
-                            padding: '7px 4px',
-                            borderRadius: '8px',
-                            border: orderWeightInput.weight === sug.val ? '1.5px solid var(--primary-color)' : '1px solid var(--border-color)',
-                            background: orderWeightInput.weight === sug.val ? 'var(--primary-color)' : '#f8fafc',
-                            color: orderWeightInput.weight === sug.val ? '#ffffff' : 'var(--text-primary)',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {sug.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                      {[
-                        { label: '2 kg', val: '2' },
-                        { label: '3 kg', val: '3' },
-                        { label: '4 kg', val: '4' },
-                        { label: '5 kg', val: '5' }
-                      ].map(sug => (
-                        <button
-                          key={sug.val}
-                          type="button"
-                          onClick={() => handleOrderWeightCalc('weight', sug.val, showOrderWeightModal.price)}
-                          style={{
-                            padding: '7px 4px',
-                            borderRadius: '8px',
-                            border: orderWeightInput.weight === sug.val ? '1.5px solid var(--primary-color)' : '1px solid var(--border-color)',
-                            background: orderWeightInput.weight === sug.val ? 'var(--primary-color)' : '#f8fafc',
-                            color: orderWeightInput.weight === sug.val ? '#ffffff' : 'var(--text-primary)',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {sug.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
                 <div style={{ textAlign: 'center', fontWeight: '700', opacity: 0.5, margin: '5px 0' }}>OR</div>
                 <div className="ord-weight-input-group" style={{ display: 'flex', flexDirection: 'column', gap: '5px', textAlign: 'left', marginBottom: '15px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '700' }}>Amount (₹)</label>
@@ -5739,7 +5192,7 @@ const StorePortal = () => {
                 <div className="ord-preview-body">
                   <div className="ord-preview-top" style={{ marginBottom: '15px' }}>
                     <div>
-                      <h3>Ravi Sweets</h3>
+                      <h3>Raju Ghee Sweets</h3>
                       <p>{previewOrder.storeName}</p>
                       <p style={{ marginTop: '6px' }}>
                         <strong>Order:</strong> {previewOrder.serialNumber ? `S${previewOrder.serialNumber}-${previewOrder.orderId}` : `#${previewOrder.orderId}`}
@@ -5762,6 +5215,14 @@ const StorePortal = () => {
                     {previewOrder.globalDescription && <p><strong>Global Note:</strong> {previewOrder.globalDescription}</p>}
                     {previewOrder.mUnitDescription && <p><strong>Mfg Note:</strong> {previewOrder.mUnitDescription}</p>}
                     {previewOrder.pUnitDescription && <p><strong>Pack Note:</strong> {previewOrder.pUnitDescription}</p>}
+                    {previewOrder.imageUrl && (
+                      <div style={{ marginTop: '8px' }}>
+                        <p style={{ margin: '0 0 4px 0' }}><strong>Order Attachment / Image:</strong></p>
+                        <a href={previewOrder.imageUrl} target="_blank" rel="noopener noreferrer">
+                          <img src={previewOrder.imageUrl} alt="Order reference attachment" style={{ maxWidth: '140px', maxHeight: '140px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #cbd5e1' }} />
+                        </a>
+                      </div>
+                    )}
                   </div>
 
                   {/* Tabs Header */}

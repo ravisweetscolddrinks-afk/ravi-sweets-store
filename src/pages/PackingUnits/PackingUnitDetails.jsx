@@ -52,7 +52,8 @@ const PackingUnitDetails = () => {
     qzConnected,
     selectedQZPrinter,
     printRawBLE,
-    printRawUSB
+    printRawUSB,
+    printHTMLContent
   } = usePrinter();
 
   // Editing Packing Details States
@@ -148,7 +149,7 @@ const PackingUnitDetails = () => {
         bytes.push(...INIT);
         bytes.push(...CENTER);
         bytes.push(...DOUBLE_SIZE);
-        bytes.push(...encoder.encode("RAVI SWEETS\n"));
+        bytes.push(...encoder.encode("RAJU GHEE SWEETS\n"));
         bytes.push(...NORMAL_SIZE);
         bytes.push(...encoder.encode("Quality Sweets & Savouries\n"));
         bytes.push(...encoder.encode("--------------------------------\n"));
@@ -305,7 +306,7 @@ const PackingUnitDetails = () => {
         
         bytes.push(...CENTER);
         bytes.push(...DOUBLE_SIZE);
-        bytes.push(...encoder.encode("RAVI SWEETS\n"));
+        bytes.push(...encoder.encode("RAJU GHEE SWEETS\n"));
         bytes.push(...NORMAL_SIZE);
         bytes.push(...encoder.encode("Quality Sweets & Savouries\n"));
         bytes.push(...encoder.encode("--------------------------------\n"));
@@ -446,7 +447,7 @@ const PackingUnitDetails = () => {
         <body>
           \${boxesList.map((box, index) => \`
             <div class="slip">
-              <div class="title">Ravi Sweets</div>
+              <div class="title">Raju Ghee Sweets</div>
               <div class="subtitle">Quality Sweets & Savouries</div>
               
               <div class="box-header">BOX \${box.boxNum} OF \${boxesList.length}</div>
@@ -479,14 +480,7 @@ const PackingUnitDetails = () => {
       </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'width=600,height=800');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 500);
+    printHTMLContent(printContent);
   };
 
   useEffect(() => {

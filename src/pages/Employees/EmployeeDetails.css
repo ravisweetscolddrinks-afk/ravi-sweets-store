@@ -342,6 +342,15 @@
   color: var(--primary-color);
 }
 
+.adv-dropdown-item.delete {
+  color: var(--error-color);
+}
+
+.adv-dropdown-item.delete:hover {
+  background: #FEF2F2;
+  color: var(--error-color);
+}
+
 /* History Modal */
 .hist-list {
   display: flex;
@@ -598,4 +607,48 @@
   .details-tab-btn {
     white-space: nowrap;
   }
+}
+
+/* Action Icon Buttons for Advances */
+.action-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  background: #F8FAFC;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.action-icon-btn.add { 
+  color: #059669; 
+  background: #E6FDF5; 
+  border-color: #A7F3D0;
+}
+.action-icon-btn.add:hover { 
+  background: #A7F3D0; 
+  transform: translateY(-2px);
+}
+
+.action-icon-btn.edit { 
+  color: var(--primary-color); 
+  background: #EFF6FF; 
+  border-color: #BFDBFE;
+}
+.action-icon-btn.edit:hover { 
+  background: #BFDBFE; 
+  transform: translateY(-2px);
+}
+
+.action-icon-btn.delete { 
+  color: var(--error-color); 
+  background: #FEF2F2; 
+  border-color: #FECACA;
+}
+.action-icon-btn.delete:hover { 
+  background: #FECACA; 
+  transform: translateY(-2px);
 }

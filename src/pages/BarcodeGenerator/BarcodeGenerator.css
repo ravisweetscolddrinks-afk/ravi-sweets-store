@@ -1,0 +1,869 @@
+/* Barcode Generator Styling System */
+
+.barcode-generator-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1a202c;
+  background-color: #f8fafc;
+  min-height: 100vh;
+}
+
+/* USB Printer Control Banner */
+.usb-printer-control-banner {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.usb-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.usb-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.usb-status-dot.active {
+  background: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+}
+
+.usb-status-dot.inactive {
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+}
+
+.usb-banner-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.usb-banner-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.usb-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .usb-printer-control-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Page Header */
+.barcode-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  background: #ffffff;
+  padding: 20px 24px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.barcode-title-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.barcode-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.barcode-page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.barcode-page-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.barcode-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* USB Status Badge */
+.usb-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.usb-status-badge.connected {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.usb-status-badge.disconnected {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* Buttons */
+.barcode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.barcode-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.barcode-btn-primary {
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+}
+
+.barcode-btn-primary:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.barcode-btn-secondary {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.barcode-btn-secondary:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.barcode-btn-outline {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px dashed #86efac;
+}
+
+.barcode-btn-outline:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #4ade80;
+}
+
+/* Calibration Panel */
+.calibration-panel {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-top: 12px;
+}
+
+.calibration-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  outline: none;
+  background: #ffffff;
+}
+
+.calibration-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  outline: none;
+  background: #ffffff;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+/* Grid Layout */
+.barcode-main-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .barcode-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Cards */
+.barcode-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.card-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  color: #0f172a;
+}
+
+.card-section-header.margin-top {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.card-section-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.live-tag {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #ecfdf5;
+  color: #047857;
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid #a7f3d0;
+}
+
+/* Search Box */
+.barcode-search-box {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.barcode-search-box .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.barcode-search-box input {
+  width: 100%;
+  padding: 10px 36px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.barcode-search-box input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.clear-search {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+/* Item Selection Cards List */
+.item-select-list {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #fafafa;
+}
+
+.item-select-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.item-select-card:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.item-select-card.selected {
+  border-color: #10b981;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 1px #10b981;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.item-meta {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.selected-check {
+  color: #10b981;
+}
+
+.item-loader, .no-items-found {
+  text-align: center;
+  padding: 24px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* Weight Inputs & Presets Grid */
+.weight-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.input-with-unit {
+  display: flex;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.input-with-unit input {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+  width: 100%;
+}
+
+.unit-label {
+  padding: 10px 14px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  border-left: 1px solid #cbd5e1;
+}
+
+.unit-prefix {
+  padding: 10px 14px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 700;
+  border-right: 1px solid #cbd5e1;
+}
+
+.weight-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+
+.preset-btn {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.preset-btn.active {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+/* Quantity & Row 2 Col */
+.form-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.quantity-counter {
+  display: flex;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.quantity-counter button {
+  width: 38px;
+  height: 42px;
+  background: #f1f5f9;
+  border: none;
+  font-size: 18px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+}
+
+.quantity-counter button:hover {
+  background: #e2e8f0;
+}
+
+.quantity-counter input {
+  flex: 1;
+  text-align: center;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  outline: none;
+}
+
+/* Format Toggles */
+.format-toggle-group {
+  display: flex;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.margin-top {
+  margin-top: 16px;
+}
+
+.form-actions-row {
+  margin-top: 20px;
+}
+
+/* RIGHT COLUMN - LIVE STICKER PREVIEW */
+.barcode-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sticker-preview-wrapper {
+  background: #e2e8f0;
+  padding: 24px;
+  border-radius: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Physical Sticker Card (Matches attached user photo exactly!) */
+.physical-sticker-preview {
+  width: 320px; /* Scaled visual ratio matching standard 50mm x 25mm label */
+  min-height: 160px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  font-family: 'Arial', 'Helvetica', sans-serif;
+  color: #000000;
+}
+
+/* Header line centered bold */
+.preview-store-header {
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #000000;
+  margin-bottom: 4px;
+  font-family: 'Arial', 'Helvetica', sans-serif;
+}
+
+/* Subheader line */
+.preview-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 4px;
+}
+
+.preview-item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #000000;
+  letter-spacing: -0.2px;
+}
+
+.preview-weight {
+  font-size: 14px;
+  font-weight: 600;
+  color: #000000;
+}
+
+/* Barcode SVG container */
+.preview-barcode-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 2px 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.preview-barcode-svg {
+  max-width: 100%;
+  height: 44px;
+}
+
+/* Footer row */
+.preview-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 2px;
+}
+
+.preview-barcode-id {
+  font-size: 14px;
+  font-weight: 600;
+  color: #000000;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.preview-mrp {
+  font-size: 18px;
+  font-weight: 700;
+  color: #000000;
+  letter-spacing: -0.3px;
+  font-family: 'Arial', 'Helvetica', sans-serif;
+}
+
+.preview-info-box {
+  display: flex;
+  justify-content: space-between;
+  background: #f8fafc;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-top: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.info-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.info-val.monospace {
+  font-family: monospace;
+}
+
+.preview-action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* Batch Queue Card */
+.queue-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.clear-queue-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.queue-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+.queue-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  padding: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.queue-table td {
+  padding: 10px 8px;
+  font-size: 13px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.queue-qty {
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.remove-queue-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+}
+
+.queue-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.queue-total-summary {
+  font-size: 13px;
+  color: #334155;
+  text-align: right;
+}
+
+.empty-queue-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: #94a3b8;
+}
+
+.empty-queue-icon {
+  margin-bottom: 8px;
+}
+
+.monospace {
+  font-family: monospace;
+}
+
+/* PRINT MEDIA QUERIES (@media print) */
+.printable-stickers-area {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .printable-stickers-area, .printable-stickers-area * {
+    visibility: visible;
+  }
+
+  .printable-stickers-area {
+    display: grid !important;
+    grid-template-columns: repeat(2, 50mm) !important; /* 2 Column / 2-Up Sticker Roll */
+    column-gap: 3mm !important;
+    row-gap: 2mm !important;
+    width: 103mm !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: #ffffff;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print-sticker-card {
+    width: 50mm;
+    height: 25mm;
+    border: 1px solid #d1d5db;
+    border-radius: 1mm;
+    padding: 1.5mm 2mm;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    page-break-inside: avoid;
+    font-family: 'Arial', sans-serif;
+    color: #000000;
+  }
+
+  .sticker-header-title {
+    text-align: center;
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .sticker-sub-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8pt;
+    font-weight: 600;
+    color: #000000;
+  }
+
+  .sticker-barcode-wrapper {
+    display: flex;
+    justify-content: center;
+    height: 11mm;
+    overflow: hidden;
+  }
+
+  .sticker-barcode-wrapper svg {
+    height: 100%;
+    width: 100%;
+  }
+
+  .sticker-footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .sticker-code-id {
+    font-size: 8pt;
+    font-weight: 600;
+    font-family: monospace;
+  }
+
+  .sticker-mrp-price {
+    font-size: 10pt;
+    font-weight: 700;
+  }
+}

@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Factory, Package, LogOut, Users, User } from 'lucide-react';
+import { Store, Factory, Package, LogOut, Users, User, Barcode } from 'lucide-react';
 import { auth, db } from '../../config/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import Loader from '../../components/Loader/Loader';
+import logo from '../../assets/logo.png';
 import './Onboarding.css';
+
+
+
 
 const Onboarding = () => {
   const [userData, setUserData] = useState(null);
@@ -23,7 +27,7 @@ const Onboarding = () => {
       try {
         let userProfile = null;
         let employeeProfile = null;
-        if (auth.currentUser?.email === 'admin@ravisweets.com') {
+        if (auth.currentUser?.email === 'admin@rajusweets.com') {
            userProfile = {
              name: "Super Admin",
              role: 'admin',
@@ -103,87 +107,154 @@ const Onboarding = () => {
   const pUnits = profile.access?.pUnits || [];
 
   return (
-    <div className="onb-container">
-      <div className="onb-header">
-        <div>
-          <h1>Welcome, {profile.name}</h1>
-          <p>Select a portal to continue</p>
+    <div className="onb-page-wrapper">
+      {/* Dark Green Polaris Top Header */}
+      <header className="onb-top-header">
+        <div className="onb-header-left">
+          <div className="onb-logo-wrapper">
+            <img src={logo} alt="Raju Ghee Sweets" className="onb-logo-img" />
+            <span className="onb-brand-title">Raju Ghee Sweets</span>
+          </div>
+          <span className="onb-season-tag">Portal Gateway</span>
         </div>
-        <button className="onb-logout" onClick={() => signOut(auth).then(() => { localStorage.removeItem('userPhone'); navigate('/login'); })}>
-          <LogOut size={16} /> Logout
-        </button>
-      </div>
-
-      <div className="onb-grid">
-        {stores.map(storeId => (
-          <motion.div 
-            key={`store-${storeId}`} 
-            className="onb-card store" 
-            onClick={() => navigate(`/store-portal/${storeId}`)}
-            whileHover={{ y: -5 }}
+        <div className="onb-header-right">
+          <button 
+            className="onb-logout-btn" 
+            onClick={() => signOut(auth).then(() => { localStorage.removeItem('userPhone'); navigate('/login'); })}
           >
-            <div className="icon-box"><Store size={32} /></div>
-            <h3>{storeId === 'all' ? 'All Stores' : getStoreName(storeId)}</h3>
-            <p>Store Portal</p>
-          </motion.div>
-        ))}
+            <LogOut size={15} /> Logout
+          </button>
+        </div>
+      </header>
 
-        {mUnits.map(unitId => (
-          <motion.div 
-            key={`munit-${unitId}`} 
-            className="onb-card munit" 
-            onClick={() => navigate(`/munit-portal/${unitId}`)}
-            whileHover={{ y: -5 }}
-          >
-            <div className="icon-box"><Factory size={32} /></div>
-            <h3>{unitId === 'all' ? 'All Manufacturing' : getMUnitName(unitId)}</h3>
-            <p>Manufacturing Portal</p>
-          </motion.div>
-        ))}
+      {/* Main Canvas Body */}
+      <div className="onb-container">
+        <div className="onb-welcome-banner">
+          <div>
+            <h1 className="onb-welcome-title">Welcome back, {profile.name} 👋</h1>
+            <p className="onb-welcome-subtitle">Select a portal below to access your workspace and manage operations</p>
+          </div>
+        </div>
 
-        {pUnits.map(unitId => (
-          <motion.div 
-            key={`punit-${unitId}`} 
-            className="onb-card punit" 
-            onClick={() => navigate(`/punit-portal/${unitId}`)}
-            whileHover={{ y: -5 }}
-          >
-            <div className="icon-box"><Package size={32} /></div>
-            <h3>{unitId === 'all' ? 'All Packing' : getPUnitName(unitId)}</h3>
-            <p>Packing Portal</p>
-          </motion.div>
-        ))}
+        <div className="onb-grid">
+          {stores.map(storeId => (
+            <motion.div 
+              key={`store-${storeId}`} 
+              className="onb-card store" 
+              onClick={() => navigate(`/store-portal/${storeId}`)}
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className="onb-icon-box store">
+                <Store size={28} />
+              </div>
+              <div className="onb-card-body">
+                <h3>{storeId === 'all' ? 'All Outlets' : getStoreName(storeId)}</h3>
+                <p>Store & POS Portal</p>
+              </div>
+              <span className="onb-action-chip">Launch Portal &rarr;</span>
+            </motion.div>
+          ))}
 
-        {profile.access?.employees && (
-          <motion.div 
-            key="employee-portal" 
-            className="onb-card employee" 
-            onClick={() => navigate('/employee-portal')}
-            whileHover={{ y: -5 }}
-            style={{ borderLeft: '6px solid #8b5cf6' }}
-          >
-            <div className="icon-box" style={{ background: '#f5f3ff', color: '#8b5cf6' }}><Users size={32} /></div>
-            <h3>Employee Operations</h3>
-            <p>Employees & Timesheet Portal</p>
-          </motion.div>
-        )}
+          {mUnits.map(unitId => (
+            <motion.div 
+              key={`munit-${unitId}`} 
+              className="onb-card munit" 
+              onClick={() => navigate(`/munit-portal/${unitId}`)}
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className="onb-icon-box munit">
+                <Factory size={28} />
+              </div>
+              <div className="onb-card-body">
+                <h3>{unitId === 'all' ? 'All Kitchens' : getMUnitName(unitId)}</h3>
+                <p>Manufacturing Kitchen</p>
+              </div>
+              <span className="onb-action-chip">Launch Portal &rarr;</span>
+            </motion.div>
+          ))}
 
-        {(employeeProfile || profile.access?.individual) && (
-          <motion.div 
-            key="individual-portal" 
-            className="onb-card employee-individual" 
-            onClick={() => navigate('/individual-portal')}
-            whileHover={{ y: -5 }}
-            style={{ borderLeft: '6px solid #a855f7' }}
-          >
-            <div className="icon-box" style={{ background: '#f3e8ff', color: '#a855f7' }}><User size={32} /></div>
-            <h3>My Profile</h3>
-            <p>Personal Details & Advances</p>
-          </motion.div>
-        )}
+          {pUnits.map(unitId => (
+            <motion.div 
+              key={`punit-${unitId}`} 
+              className="onb-card punit" 
+              onClick={() => navigate(`/punit-portal/${unitId}`)}
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className="onb-icon-box punit">
+                <Package size={28} />
+              </div>
+              <div className="onb-card-body">
+                <h3>{unitId === 'all' ? 'All Packing Units' : getPUnitName(unitId)}</h3>
+                <p>Packing & Despatch</p>
+              </div>
+              <span className="onb-action-chip">Launch Portal &rarr;</span>
+            </motion.div>
+          ))}
+
+          {profile.access?.employees && (
+            <motion.div 
+              key="employee-portal" 
+              className="onb-card employee" 
+              onClick={() => navigate('/employee-portal')}
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className="onb-icon-box employee">
+                <Users size={28} />
+              </div>
+              <div className="onb-card-body">
+                <h3>Employee Operations</h3>
+                <p>Staff & Attendance Management</p>
+              </div>
+              <span className="onb-action-chip">Launch Portal &rarr;</span>
+            </motion.div>
+          )}
+
+          {(profile.role === 'admin' || profile.access?.barcodeGenerator) && (
+            <motion.div 
+              key="barcode-portal" 
+              className="onb-card store" 
+              onClick={() => navigate('/barcode-generator')}
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className="onb-icon-box store" style={{ background: '#ecfdf5', color: '#059669' }}>
+                <Barcode size={28} />
+              </div>
+              <div className="onb-card-body">
+                <h3>Barcode Generator</h3>
+                <p>Weight & Sticker Printing</p>
+              </div>
+              <span className="onb-action-chip">Launch Portal &rarr;</span>
+            </motion.div>
+          )}
+
+          {(employeeProfile || profile.access?.individual) && (
+            <motion.div 
+              key="individual-portal" 
+              className="onb-card individual" 
+              onClick={() => navigate('/individual-portal')}
+              whileHover={{ y: -4 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div className="onb-icon-box individual">
+                <User size={28} />
+              </div>
+              <div className="onb-card-body">
+                <h3>My Profile</h3>
+                <p>Personal Details & Payslips</p>
+              </div>
+              <span className="onb-action-chip">Launch Portal &rarr;</span>
+            </motion.div>
+          )}
+        </div>
       </div>
     </div>
   );
+
 };
 
 export default Onboarding;

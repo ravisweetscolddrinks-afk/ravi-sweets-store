@@ -59,7 +59,7 @@ const Login = () => {
     const handleAppInstalled = () => {
       setInstallPromptEvent(null);
       window.deferredPrompt = null;
-      toast.success('Ravi Sweets App installed successfully!');
+      toast.success('Raju Sweets App installed successfully!');
     };
 
     window.addEventListener('appinstalled', handleAppInstalled);
@@ -171,8 +171,8 @@ const Login = () => {
         transition={{ duration: 0.5 }}
       >
         <div className="login-logo-container">
-          <img src={logo} alt="Ravi Sweets" style={{ width: '80px', height: '80px', objectFit: 'contain', marginBottom: '16px', borderRadius: '12px' }} />
-          <h1 style={{ fontSize: '32px', color: 'var(--primary-color)', marginBottom: '4px', fontWeight: '800' }}>Ravi Sweets</h1>
+          <img src={logo} alt="Raju Ghee Sweets" style={{ width: '80px', height: '80px', objectFit: 'contain', marginBottom: '16px', borderRadius: '12px' }} />
+          <h1 style={{ fontSize: '32px', color: 'var(--primary-color)', marginBottom: '4px', fontWeight: '800' }}>Raju Ghee Sweets</h1>
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', fontWeight: '500' }}>Authentic Traditional Flavors</p>
         </div>
 
@@ -203,7 +203,7 @@ const Login = () => {
                 <input 
                   type="email" 
                   className="form-input" 
-                  placeholder="admin@ravisweets.com"
+                  placeholder="admin@rajusweets.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -299,7 +299,7 @@ const Login = () => {
             whileTap={{ scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           >
-            <Download size={18} /> Install Ravi Sweets App
+            <Download size={18} /> Install Raju Sweets App
           </motion.button>
         )}
 

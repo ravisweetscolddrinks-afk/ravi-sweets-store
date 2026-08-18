@@ -50,25 +50,21 @@ const Support = () => {
   ];
 
   return (
-    <div className="support-container">
-      {/* Decorative Elements */}
-      <div className="paper-plane plane-1">🚀</div>
-      <div className="paper-plane plane-2">✈️</div>
-
-      <motion.div 
-        className="support-header"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <div className="support-badge">
-          <Headset size={16} />
-          <span>We're here to help</span>
+    <div className="polaris-page-container">
+      {/* Polaris Header Bar */}
+      <div className="polaris-header-bar">
+        <div className="polaris-page-title-group">
+          <div className="polaris-page-title-icon">
+            <Headset size={24} />
+          </div>
+          <h1 className="polaris-page-title">Support & Help</h1>
         </div>
-        <h1 className="support-title">Technical Support</h1>
-        <p className="support-subtitle">
+      </div>
+
+        <div className="support-subtitle" style={{ fontSize: '13px', color: 'var(--polaris-text-subdued)', marginBottom: '20px' }}>
           Need help? Our team at <strong>GamaNext</strong> is here to assist you.
-        </p>
-      </motion.div>
+        </div>
+
 
       <div className="support-grid">
         {cards.map((card, index) => (
@@ -122,7 +118,7 @@ const Support = () => {
           <div className="rocket-illustration">🚀</div>
           <div className="banner-info">
             <h2>GamaNext Solutions</h2>
-            <p>Accelerating Digital Transformation for <strong>Ravi Sweets</strong></p>
+            <p>Accelerating Digital Transformation for <strong>Raju Ghee Sweets</strong></p>
           </div>
         </div>
         <div className="store-illustration">🏪</div>

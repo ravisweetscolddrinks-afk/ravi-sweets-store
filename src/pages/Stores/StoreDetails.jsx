@@ -50,11 +50,14 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import './StoreDetails.css';
 import { triggerWhatsAppOrderReady } from '../../utils/whatsapp';
+import { usePrinter } from '../../context/PrinterContext';
+import { generateReceiptHTML } from '../../utils/printReceiptHelper';
 
 
 const StoreDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { printHTMLContent } = usePrinter();
   const [store, setStore] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -234,9 +237,10 @@ const StoreDetails = () => {
   };
 
 
-  const handlePrint = (bill) => {
-    toast.success(`Printing Bill: ${bill.billId}`);
-    // Future: Add real print logic
+  const handlePrint = async (bill) => {
+    if (!bill) return;
+    const printContent = generateReceiptHTML(bill);
+    await printHTMLContent(printContent, bill);
   };
 
 
@@ -274,7 +278,13 @@ const StoreDetails = () => {
       const billData = {
         billId,
         storeId: id,
-        storeName: store?.name || 'Ravi Sweets',
+        storeName: store?.name || 'Raju Ghee Sweets',
+        tradeName: store?.tradeName || store?.name || 'Raju Ghee Sweets',
+        storeGstNumber: store?.gstNumber || '',
+        storeAddress: store?.address || '',
+        storePhone: store?.phone || '',
+        storeCity: store?.city || '',
+        storeState: store?.state || '',
         items: cart,
         discount: discountVal,
         totalAmount: totalAmt,
@@ -381,8 +391,13 @@ const StoreDetails = () => {
           </div>
           <div className="header-main-info">
             <h1>{store.name}</h1>
+            {store.tradeName && (
+              <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--primary-color)', marginTop: '2px' }}>
+                🏢 Trade Name: {store.tradeName}
+              </div>
+            )}
             <div className="header-location">
-              <MapPin size={14} /> {store.city}, {store.state}
+              <MapPin size={14} /> {store.city}, {store.state} {store.gstNumber ? `• GSTIN: ${store.gstNumber}` : ''}
             </div>
           </div>
         </div>
@@ -416,6 +431,33 @@ const StoreDetails = () => {
         {activeTab === 'info' && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <div className="info-cards-row">
+              {/* Business Identity Card */}
+              <div className="premium-info-card">
+                <div className="card-top">
+                  <div className="card-icon-box green">
+                    <Store size={22} />
+                  </div>
+                  <div className="card-label">
+                    <h3>Business Identity</h3>
+                    <p>Trade name & tax info</p>
+                  </div>
+                </div>
+                <div className="data-section green">
+                  <div className="data-row small">
+                    <span>Trade / Entity Name</span>
+                  </div>
+                  <div className="data-row" style={{ marginBottom: '8px' }}>
+                    <span style={{ fontWeight: '700' }}>{store.tradeName || store.name}</span>
+                  </div>
+                  <div className="data-row small">
+                    <span>Store GSTIN Number</span>
+                  </div>
+                  <div className="data-row">
+                    <span style={{ fontWeight: '700', color: '#1e3a8a' }}>{store.gstNumber || 'Not Registered'}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Contact Card */}
               <div className="premium-info-card">
                 <div className="card-top">
@@ -859,69 +901,6 @@ const StoreDetails = () => {
               <h3 className="modal-title">Enter Weight/Amount</h3>
               <div className="access-modal-form">
                 <div><label>Weight (kg)</label><input type="number" step="0.001" value={weightInput.weight} onChange={(e) => handleWeightCalc('weight', e.target.value)} /></div>
-
-                {/* Quick Weight Select */}
-                <div style={{ margin: '8px 0', width: '100%' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                    Quick Select Weight
-                  </label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                      {[
-                        { label: '1/4 kg', val: '0.25' },
-                        { label: '1/2 kg', val: '0.5' },
-                        { label: '3/4 kg', val: '0.75' },
-                        { label: '1 kg', val: '1' }
-                      ].map(sug => (
-                        <button
-                          key={sug.val}
-                          type="button"
-                          onClick={() => handleWeightCalc('weight', sug.val)}
-                          style={{
-                            padding: '7px 4px',
-                            borderRadius: '8px',
-                            border: weightInput.weight === sug.val ? '1.5px solid var(--primary-color)' : '1px solid var(--border-color)',
-                            background: weightInput.weight === sug.val ? 'var(--primary-color)' : '#f8fafc',
-                            color: weightInput.weight === sug.val ? '#ffffff' : 'var(--text-primary)',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {sug.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                      {[
-                        { label: '2 kg', val: '2' },
-                        { label: '3 kg', val: '3' },
-                        { label: '4 kg', val: '4' },
-                        { label: '5 kg', val: '5' }
-                      ].map(sug => (
-                        <button
-                          key={sug.val}
-                          type="button"
-                          onClick={() => handleWeightCalc('weight', sug.val)}
-                          style={{
-                            padding: '7px 4px',
-                            borderRadius: '8px',
-                            border: weightInput.weight === sug.val ? '1.5px solid var(--primary-color)' : '1px solid var(--border-color)',
-                            background: weightInput.weight === sug.val ? 'var(--primary-color)' : '#f8fafc',
-                            color: weightInput.weight === sug.val ? '#ffffff' : 'var(--text-primary)',
-                            fontSize: '12px',
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {sug.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
                 <div style={{ textAlign: 'center' }}>OR</div>
                 <div><label>Amount (₹)</label><input type="number" value={weightInput.amount} onChange={(e) => handleWeightCalc('amount', e.target.value)} /></div>
                 <div className="modal-actions">

@@ -22,7 +22,8 @@ import {
   Check, 
   Phone, 
   MapPin, 
-  AlertCircle 
+  AlertCircle,
+  Barcode
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,7 +37,8 @@ const EmployeePortal = () => {
   // Navigation Links
   const links = [
     { label: 'Employees', icon: <Users size={20} />, path: '/employee-portal/employees' },
-    { label: 'Timesheet', icon: <Clock size={20} />, path: '/employee-portal/timesheet' }
+    { label: 'Timesheet', icon: <Clock size={20} />, path: '/employee-portal/timesheet' },
+    { label: 'Barcode Generator', icon: <Barcode size={20} />, path: '/barcode-generator' }
   ];
 
   // Common State

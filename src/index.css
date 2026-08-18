@@ -1,24 +1,35 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --primary-color: #348bdd;
-  /* Ravi Green */
+  --primary-color: #0A2A1B; /* Raju Green */
+  --primary-hover: #14422c;
   --primary-light: #1E4D38;
-  --accent-color: #fcc21c;
-  /* Gold */
+  --primary-bg-soft: #e6f4ea;
+  --accent-color: #D4AF37; /* Gold */
+  
+  /* Polaris Design Tokens */
+  --polaris-bg-canvas: #f1f2f4;
+  --polaris-bg-surface: #ffffff;
+  --polaris-border-subtle: #e1e3e5;
+  --polaris-border-strong: #c9cccf;
+  --polaris-text-main: #1a1a1a;
+  --polaris-text-subdued: #616161;
+  --polaris-sidebar-bg: #ebebeb;
+  
   --text-primary: #1A202C;
-  --text-secondary: #4A5568;
-  --bg-primary: #F7FAFC;
+  --text-secondary: #616161;
+  --bg-primary: #f1f2f4;
   --bg-secondary: #FFFFFF;
   --card-bg: #FFFFFF;
-  --border-color: #E2E8F0;
+  --border-color: #e1e3e5;
   --error-color: #E53E3E;
   --success-color: #38A169;
-  --font-family: 'IBM Plex Sans', sans-serif;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --transition: all 0.2s ease-in-out;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --polaris-card-shadow: 0 1px 0 rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 * {
@@ -29,10 +40,11 @@
 
 body {
   font-family: var(--font-family);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.6;
+  background-color: var(--polaris-bg-canvas);
+  color: var(--polaris-text-main);
+  line-height: 1.5;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 button {
@@ -43,26 +55,318 @@ button {
   transition: var(--transition);
 }
 
-input {
+input, select, textarea {
   font-family: var(--font-family);
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+  background: var(--polaris-bg-canvas);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E0;
+  background: #c9cccf;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary-color);
+}
+
+/* Polaris Common Component Helpers */
+.polaris-page-container {
+  padding: 20px 32px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .polaris-page-container {
+    padding: 16px 16px 24px;
+  }
+}
+
+
+/* Header bar on pages */
+.polaris-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.polaris-page-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.polaris-page-title-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--polaris-text-main);
+}
+
+.polaris-page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--polaris-text-main);
+  letter-spacing: -0.3px;
+  margin: 0;
+}
+
+.polaris-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Buttons */
+.polaris-btn {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.polaris-btn-secondary {
+  background: #ffffff;
+  color: var(--polaris-text-main);
+  border: 1px solid var(--polaris-border-strong);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.polaris-btn-secondary:hover {
+  background: #f6f6f7;
+  border-color: #b5b8bb;
+}
+
+.polaris-btn-primary {
+  background: var(--primary-color, #0A2A1B);
+  color: #ffffff !important;
+  border: 1px solid var(--primary-color, #0A2A1B);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  height: 36px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.polaris-btn-primary:hover {
+  background: var(--primary-hover, #14422c);
+  border-color: var(--primary-hover, #14422c);
+}
+
+
+/* Cards */
+.polaris-card {
+  background: var(--polaris-bg-surface);
+  border: 1px solid var(--polaris-border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+/* Polaris Top Metrics Summary Card */
+.polaris-metrics-card {
+  background: #ffffff;
+  border: 1px solid var(--polaris-border-subtle);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.polaris-metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 16px;
+  border-right: 1px solid var(--polaris-border-subtle);
+}
+
+.polaris-metric-item:last-child {
+  border-right: none;
+}
+
+.polaris-metric-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--polaris-text-subdued);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.polaris-metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--polaris-text-main);
+}
+
+.polaris-metric-subtext {
+  font-size: 12px;
+  color: var(--polaris-text-subdued);
+}
+
+/* Polaris Table Toolbar */
+.polaris-table-toolbar {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--polaris-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #ffffff;
+}
+
+.polaris-table-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f6f6f7;
+  border: 1px solid var(--polaris-border-strong);
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 36px;
+  flex: 1;
+  max-width: 400px;
+}
+
+.polaris-table-search input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 13px;
+  color: var(--polaris-text-main);
+  outline: none;
+}
+
+/* Polaris Data Table */
+.polaris-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.polaris-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.polaris-table th {
+  background: #f7f7f8;
+  color: var(--polaris-text-subdued);
+  font-weight: 600;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--polaris-border-subtle);
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.polaris-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--polaris-border-subtle);
+  color: var(--polaris-text-main);
+  vertical-align: middle;
+}
+
+.polaris-table tr:hover td {
+  background: #f9fafb;
+}
+
+/* Product item cell layout */
+.polaris-item-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.polaris-item-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f1f2f4;
+  border: 1px solid var(--polaris-border-subtle);
+}
+
+.polaris-item-title {
+  font-weight: 600;
+  color: var(--polaris-text-main);
+}
+
+/* Status Pill Badges */
+.polaris-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.polaris-badge-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.polaris-badge-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.polaris-badge-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.polaris-badge-neutral {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* Stock text color helper */
+.polaris-out-of-stock {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.polaris-in-stock {
+  color: var(--polaris-text-main);
 }
 
 /* Glassmorphism utility */
@@ -75,42 +379,35 @@ input {
 
 /* Animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .fade-in {
-  animation: fadeIn 0.5s ease forwards;
+  animation: fadeIn 0.3s ease forwards;
 }
 
 /* Compact Utilities */
 .btn-compact {
-  height: 40px;
-  padding: 0 20px;
-  font-size: 14px;
-  font-weight: 700;
-  border-radius: 10px;
-  display: flex;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   transition: var(--transition);
 }
 
 .input-compact {
-  height: 40px;
-  padding: 0 14px;
-  font-size: 14px;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: #F7FAFC;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+  border: 1px solid var(--polaris-border-strong);
+  border-radius: 8px;
+  background: #FFFFFF;
   width: 100%;
   transition: var(--transition);
 }
@@ -119,7 +416,7 @@ input {
   border-color: var(--primary-color);
   background: #FFFFFF;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(10, 42, 27, 0.1);
+  box-shadow: 0 0 0 3px rgba(10, 42, 27, 0.12);
 }
 
 /* Loader */
@@ -135,12 +432,17 @@ input {
   animation: rotation 0.8s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite;
 }
 
-@keyframes rotation {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
+/* Global Button Standardization */
+button:not(.polaris-header-logo):not(.sidebar-item):not(.portal-sidebar-item) {
+  font-family: inherit;
 }
+
+.modal-btn, .form-btn, .action-btn-primary, .submit-btn {
+  height: 38px !important;
+  padding: 0 16px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+}
+
+

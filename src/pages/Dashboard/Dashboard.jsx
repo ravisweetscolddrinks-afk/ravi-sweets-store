@@ -247,25 +247,26 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="dashboard-container">
-      {/* Top Header */}
-      <div className="db-header">
-        <div className="db-title-area">
-          <h1>Super Admin Dashboard</h1>
-          <p>Real-time sweet sales performance, status tracking, and delivery timelines.</p>
+    <div className="polaris-page-container">
+      {/* Polaris Top Header Bar */}
+      <div className="polaris-header-bar">
+        <div className="polaris-page-title-group">
+          <div className="polaris-page-title-icon">
+            <TrendingUp size={24} />
+          </div>
+          <h1 className="polaris-page-title">Dashboard</h1>
         </div>
         
-        <div className="db-controls">
-          <div className="db-store-selector-wrapper">
-            <label>Select Outlet Store</label>
+        <div className="polaris-header-actions">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--polaris-text-subdued)' }}>Outlet Store:</span>
             <select 
-              className="db-store-select"
+              className="input-compact"
+              style={{ height: '34px', fontSize: '13px', width: 'auto' }}
               value={selectedStoreFilter}
-              onChange={(e) => {
-                setSelectedStoreFilter(e.target.value);
-              }}
+              onChange={(e) => setSelectedStoreFilter(e.target.value)}
             >
-              <option value="All">All Stores</option>
+              <option value="All">All Outlets & Stores</option>
               {stores.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
@@ -273,6 +274,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
 
       {/* Urgency Countdown Tiles Grid */}
       <div className="urgency-grid">
@@ -647,7 +649,7 @@ const Dashboard = () => {
                 <div className="ord-preview-body">
                   <div className="ord-preview-top" style={{ marginBottom: '15px' }}>
                     <div>
-                      <h3>Ravi Sweets</h3>
+                      <h3>Raju Ghee Sweets</h3>
                       <p>{previewOrder.storeName}</p>
                       <p style={{ marginTop: '6px' }}><strong>Order:</strong> #{previewOrder.orderId}</p>
                       <p style={{ color: 'var(--primary-color)', fontWeight: '700', marginTop: '2px' }}>

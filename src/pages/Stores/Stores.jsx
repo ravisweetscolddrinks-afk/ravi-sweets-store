@@ -45,6 +45,8 @@ const Stores = () => {
 
   const [formData, setFormData] = useState({
     name: '',
+    tradeName: '',
+    gstNumber: '',
     phone: '',
     address: '',
     city: '',
@@ -100,6 +102,8 @@ const Stores = () => {
   const resetForm = () => {
     setFormData({
       name: '',
+      tradeName: '',
+      gstNumber: '',
       phone: '',
       address: '',
       city: '',
@@ -115,6 +119,8 @@ const Stores = () => {
     setEditingStore(store);
     setFormData({
       name: store.name,
+      tradeName: store.tradeName || '',
+      gstNumber: store.gstNumber || '',
       phone: store.phone,
       address: store.address,
       city: store.city,
@@ -141,84 +147,100 @@ const Stores = () => {
 
   const filteredStores = stores.filter(store => 
     store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (store.tradeName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (store.gstNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     store.city.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="stores-container">
-      <div className="stores-header">
-        <div className="stores-header-info">
-          <h1>Retail Outlets</h1>
-          <p>Manage store locations, contact info, and coordinates</p>
+    <div className="polaris-page-container">
+      {/* Polaris Header Bar */}
+      <div className="polaris-header-bar">
+        <div className="polaris-page-title-group">
+          <div className="polaris-page-title-icon">
+            <Store size={24} />
+          </div>
+          <h1 className="polaris-page-title">Stores Management</h1>
         </div>
-        {!showAddForm && (
-          <button className="stores-add-btn" onClick={() => setShowAddForm(true)}>
-            <Plus size={20} /> Add New Store
+        <div className="polaris-header-actions">
+          <button className="polaris-btn polaris-btn-primary" onClick={() => { resetForm(); setShowAddForm(true); }}>
+            <Plus size={16} /> Add Outlet Store
           </button>
-        )}
+        </div>
       </div>
 
-      <div className="stores-content-layout">
-        <div className={`stores-list-section ${showAddForm ? 'shrink' : 'full'}`}>
-          <div className="stores-search-bar">
-            <Search size={18} className="stores-search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search by store name or city..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="stores-grid">
-            {loading ? (
-              <div className="stores-empty-state"><div className="loader"></div></div>
-            ) : filteredStores.length > 0 ? (
-              filteredStores.map(store => (
-                <div key={store.id} className="store-card" onClick={() => navigate(`/stores/${store.id}`)} style={{ cursor: 'pointer' }}>
-                  <div className="store-card-header">
-                    <div className="store-icon-box">
-                      <Store size={24} />
-                    </div>
-                    <div className="store-card-actions">
-                      <button onClick={(e) => { e.stopPropagation(); handleEdit(store); }} className="store-mini-btn edit"><Edit size={16} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); setShowDeleteModal(store.id); }} className="store-mini-btn delete"><Trash2 size={16} /></button>
-                    </div>
-                  </div>
-                  <div className="store-card-body">
-                    <h3>{store.name}</h3>
-                    <div className="store-info-item">
-                      <Phone size={14} />
-                      <span>{store.phone}</span>
-                    </div>
-                    <div className="store-info-item">
-                      <MapPin size={14} />
-                      <span>{store.address}</span>
-                    </div>
-                    <div className="store-info-item">
-                      <Navigation size={14} />
-                      <span>{store.city}, {store.state}</span>
-                    </div>
-                    {(store.latitude && store.longitude) && (
-                      <div className="store-geo-tag">
-                        <span>Lat: {store.latitude}</span>
-                        <span>Long: {store.longitude}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="stores-empty-state">
-                <div className="empty-icon-circle">
-                  <Store size={32} />
-                </div>
-                <h3>No Stores Found</h3>
-                <p>Register your first retail outlet to start managing locations.</p>
-              </div>
-            )}
-          </div>
+      <div className="polaris-card" style={{ padding: '20px' }}>
+        {/* Search Bar */}
+        <div className="stores-search-bar" style={{ marginBottom: '20px' }}>
+          <Search size={18} />
+          <input 
+            type="text" 
+            placeholder="Search stores by outlet name, trade name, GSTIN, city..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
+
+        {/* Stores Grid */}
+        <div className="stores-grid">
+          {loading ? (
+            <div className="stores-empty-state"><div className="loader"></div></div>
+          ) : filteredStores.length > 0 ? (
+            filteredStores.map(store => (
+              <div key={store.id} className="store-card" onClick={() => navigate(`/stores/${store.id}`)} style={{ cursor: 'pointer' }}>
+                <div className="store-card-header">
+                  <div className="store-icon-box">
+                    <Store size={24} />
+                  </div>
+                  <div className="store-card-actions">
+                    <button onClick={(e) => { e.stopPropagation(); handleEdit(store); }} className="store-mini-btn edit"><Edit size={16} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); setShowDeleteModal(store.id); }} className="store-mini-btn delete"><Trash2 size={16} /></button>
+                  </div>
+                </div>
+                <div className="store-card-body">
+                  <h3>{store.name}</h3>
+                  {store.tradeName && (
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--primary-color)', marginBottom: '6px' }}>
+                      🏢 {store.tradeName}
+                    </div>
+                  )}
+                  {store.gstNumber && (
+                    <div style={{ fontSize: '11px', fontWeight: '700', color: '#1e3a8a', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', marginBottom: '8px' }}>
+                      GSTIN: {store.gstNumber}
+                    </div>
+                  )}
+                  <div className="store-info-item">
+                    <Phone size={14} />
+                    <span>{store.phone}</span>
+                  </div>
+                  <div className="store-info-item">
+                    <MapPin size={14} />
+                    <span>{store.address}</span>
+                  </div>
+                  <div className="store-info-item">
+                    <Navigation size={14} />
+                    <span>{store.city}, {store.state}</span>
+                  </div>
+                  {(store.latitude && store.longitude) && (
+                    <div className="store-geo-tag">
+                      <span>Lat: {store.latitude}</span>
+                      <span>Long: {store.longitude}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="stores-empty-state">
+              <div className="empty-icon-circle">
+                <Store size={32} />
+              </div>
+              <h3>No Stores Found</h3>
+              <p>Register your first retail outlet to start managing locations.</p>
+            </div>
+          )}
+        </div>
+      </div>
 
         <AnimatePresence>
           {showAddForm && (
@@ -235,19 +257,41 @@ const Stores = () => {
 
               <form onSubmit={handleSubmit} className="stores-form">
                 <div className="stores-input-group">
-                  <label>Store Name</label>
+                  <label>Store Name *</label>
                   <input 
                     type="text" 
                     name="name" 
                     value={formData.name}
                     onChange={handleInputChange}
-                    placeholder="e.g. Ravi Sweets Main Branch"
+                    placeholder="e.g. Raju Ghee Sweets Main Branch"
                     required 
                   />
                 </div>
 
                 <div className="stores-input-group">
-                  <label>Contact Number</label>
+                  <label>Trade Name / Business Entity</label>
+                  <input 
+                    type="text" 
+                    name="tradeName" 
+                    value={formData.tradeName}
+                    onChange={handleInputChange}
+                    placeholder="e.g. SRI RAJU SWEETS & BAKERY"
+                  />
+                </div>
+
+                <div className="stores-input-group">
+                  <label>GSTIN / GST Number</label>
+                  <input 
+                    type="text" 
+                    name="gstNumber" 
+                    value={formData.gstNumber}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 37DFJPK6083N1ZO"
+                  />
+                </div>
+
+                <div className="stores-input-group">
+                  <label>Contact Number *</label>
                   <input 
                     type="tel" 
                     name="phone" 
@@ -301,7 +345,6 @@ const Stores = () => {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
 
       {showDeleteModal && (
         <div className="modal-overlay">

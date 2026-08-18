@@ -20,7 +20,8 @@ import {
   History,
   Briefcase,
   MoreVertical,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from 'lucide-react';
 import { db } from '../../config/firebase';
 import { 
@@ -34,7 +35,8 @@ import {
   where, 
   onSnapshot, 
   orderBy,
-  serverTimestamp 
+  serverTimestamp,
+  deleteDoc
 } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -78,6 +80,19 @@ const EmployeeDetails = () => {
   const [showHistModal, setShowHistModal] = useState(false);
   const [instalments, setInstalments] = useState([]);
   const [activeDropdown, setActiveDropdown] = useState(null);
+
+  // Edit & Delete Advance States
+  const [showEditAdvModal, setShowEditAdvModal] = useState(false);
+  const [editAdvFormData, setEditAdvFormData] = useState({
+    id: '',
+    amount: '',
+    reason: '',
+    date: '',
+    time: ''
+  });
+  const [showDeleteAdvModal, setShowDeleteAdvModal] = useState(false);
+  const [advToDelete, setAdvToDelete] = useState(null);
+  const [isDeletingAdv, setIsDeletingAdv] = useState(false);
 
   useEffect(() => {
     const fetchEmployee = async () => {
@@ -289,6 +304,85 @@ const EmployeeDetails = () => {
       toast.error("Failed to add instalment");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleEditAdvClick = (adv) => {
+    setEditAdvFormData({
+      id: adv.id,
+      amount: adv.amount,
+      reason: adv.reason || '',
+      date: adv.date,
+      time: adv.time || ''
+    });
+    setSelectedAdv(adv);
+    setShowEditAdvModal(true);
+  };
+
+  const handleSaveEditAdvance = async (e) => {
+    e.preventDefault();
+    if (!editAdvFormData.amount || !editAdvFormData.reason) {
+      toast.error("Please fill in amount and reason");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Fetch instalments to calculate totalPaid
+      const qInst = query(collection(db, `advances/${editAdvFormData.id}/instalments`));
+      const querySnapshot = await getDocs(qInst);
+      const totalPaid = querySnapshot.docs.reduce((sum, doc) => sum + Number(doc.data().amount || 0), 0);
+
+      const newAmount = Number(editAdvFormData.amount);
+      if (newAmount < totalPaid) {
+        toast.error(`New amount cannot be less than the total paid amount of ₹${totalPaid}`);
+        setSubmitting(false);
+        return;
+      }
+
+      const newBalance = newAmount - totalPaid;
+      const status = newBalance <= 0 ? 'paid' : 'active';
+
+      await updateDoc(doc(db, 'advances', editAdvFormData.id), {
+        amount: newAmount,
+        balance: newBalance,
+        reason: editAdvFormData.reason,
+        date: editAdvFormData.date,
+        time: editAdvFormData.time,
+        status: status
+      });
+
+      toast.success("Advance updated successfully");
+      setShowEditAdvModal(false);
+    } catch (error) {
+      console.error("Error updating advance:", error);
+      toast.error("Failed to update advance");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteAdvance = async () => {
+    if (!advToDelete) return;
+    setIsDeletingAdv(true);
+    try {
+      // 1. Get and delete all instalments in subcollection
+      const qInst = query(collection(db, `advances/${advToDelete.id}/instalments`));
+      const querySnapshot = await getDocs(qInst);
+      const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+
+      // 2. Delete parent advance document
+      await deleteDoc(doc(db, 'advances', advToDelete.id));
+
+      toast.success("Advance deleted successfully");
+      setShowDeleteAdvModal(false);
+      setAdvToDelete(null);
+    } catch (error) {
+      console.error("Error deleting advance:", error);
+      toast.error("Failed to delete advance");
+    } finally {
+      setIsDeletingAdv(false);
     }
   };
 
@@ -552,7 +646,7 @@ const EmployeeDetails = () => {
                         <th>Date</th>
                         <th>Amount</th>
                         <th>Balance</th>
-                        <th style={{ width: '40px' }}></th>
+                        <th style={{ width: '110px' }}></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -565,25 +659,32 @@ const EmployeeDetails = () => {
                             <td style={{ color: adv.balance > 0 ? 'var(--error-color)' : '#059669', fontWeight: '700' }}>
                               ₹ {adv.balance}
                             </td>
-                            <td className="adv-action-dropdown">
-                              <button 
-                                className="adv-dropdown-trigger" 
-                                onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === adv.id ? null : adv.id); }}
-                              >
-                                <MoreVertical size={16} />
-                              </button>
-                              {activeDropdown === adv.id && (
-                                <div className="adv-dropdown-menu">
-                                  {adv.balance > 0 && (
-                                    <button className="adv-dropdown-item" onClick={(e) => { e.stopPropagation(); setSelectedAdv(adv); setShowInstModal(true); }}>
-                                      <Plus size={14} /> Add Instalment
-                                    </button>
-                                  )}
-                                  <button className="adv-dropdown-item" onClick={(e) => { e.stopPropagation(); toggleExpand(adv.id); }}>
-                                    <History size={14} /> {expandedAdv === adv.id ? 'Hide History' : 'Show History'}
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                {adv.balance > 0 && (
+                                  <button 
+                                    className="action-icon-btn add" 
+                                    title="Add Instalment"
+                                    onClick={() => { setSelectedAdv(adv); setShowInstModal(true); }}
+                                  >
+                                    <Plus size={14} />
                                   </button>
-                                </div>
-                              )}
+                                )}
+                                <button 
+                                  className="action-icon-btn edit" 
+                                  title="Edit Advance"
+                                  onClick={() => handleEditAdvClick(adv)}
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  className="action-icon-btn delete" 
+                                  title="Delete Advance"
+                                  onClick={() => { setAdvToDelete(adv); setShowDeleteAdvModal(true); }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                           {expandedAdv === adv.id && (
@@ -634,7 +735,7 @@ const EmployeeDetails = () => {
                         <th>Date</th>
                         <th>Amount</th>
                         <th>Balance</th>
-                        <th style={{ width: '40px' }}></th>
+                        <th style={{ width: '110px' }}></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -647,25 +748,32 @@ const EmployeeDetails = () => {
                             <td style={{ color: adv.balance > 0 ? 'var(--error-color)' : '#059669', fontWeight: '700' }}>
                               ₹ {adv.balance}
                             </td>
-                            <td className="adv-action-dropdown">
-                              <button 
-                                className="adv-dropdown-trigger" 
-                                onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === adv.id ? null : adv.id); }}
-                              >
-                                <MoreVertical size={16} />
-                              </button>
-                              {activeDropdown === adv.id && (
-                                <div className="adv-dropdown-menu">
-                                  {adv.balance > 0 && (
-                                    <button className="adv-dropdown-item" onClick={(e) => { e.stopPropagation(); setSelectedAdv(adv); setShowInstModal(true); }}>
-                                      <Plus size={14} /> Add Instalment
-                                    </button>
-                                  )}
-                                  <button className="adv-dropdown-item" onClick={(e) => { e.stopPropagation(); toggleExpand(adv.id); }}>
-                                    <History size={14} /> {expandedAdv === adv.id ? 'Hide History' : 'Show History'}
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                {adv.balance > 0 && (
+                                  <button 
+                                    className="action-icon-btn add" 
+                                    title="Add Instalment"
+                                    onClick={() => { setSelectedAdv(adv); setShowInstModal(true); }}
+                                  >
+                                    <Plus size={14} />
                                   </button>
-                                </div>
-                              )}
+                                )}
+                                <button 
+                                  className="action-icon-btn edit" 
+                                  title="Edit Advance"
+                                  onClick={() => handleEditAdvClick(adv)}
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  className="action-icon-btn delete" 
+                                  title="Delete Advance"
+                                  onClick={() => { setAdvToDelete(adv); setShowDeleteAdvModal(true); }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                           {expandedAdv === adv.id && (
@@ -815,6 +923,107 @@ const EmployeeDetails = () => {
                 )}
               </div>
               <button className="modal-btn cancel" style={{ width: '100%', marginTop: '20px' }} onClick={() => setShowHistModal(false)}>Close</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Advance Modal */}
+      <AnimatePresence>
+        {showEditAdvModal && (
+          <div className="modal-overlay">
+            <motion.div 
+              className="custom-modal"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              style={{ width: '450px' }}
+            >
+              <div className="modal-icon-box" style={{ background: '#E6F0F9', color: 'var(--primary-color)' }}>
+                <Edit size={32} />
+              </div>
+              <h3 className="modal-title">Edit Advance</h3>
+              
+              <form onSubmit={handleSaveEditAdvance} className="emp-data-form" style={{ textAlign: 'left', marginTop: '20px' }}>
+                <div className="emp-input-group">
+                  <label className="emp-input-label">Advance Amount</label>
+                  <input 
+                    type="number" 
+                    className="emp-text-input" 
+                    placeholder="Enter amount" 
+                    value={editAdvFormData.amount} 
+                    onChange={(e) => setEditAdvFormData({...editAdvFormData, amount: e.target.value})} 
+                    required 
+                  />
+                </div>
+                <div className="emp-form-row">
+                  <div className="emp-input-group">
+                    <label className="emp-input-label">Date</label>
+                    <input 
+                      type="date" 
+                      className="emp-text-input" 
+                      value={editAdvFormData.date} 
+                      onChange={(e) => setEditAdvFormData({...editAdvFormData, date: e.target.value})} 
+                      required 
+                    />
+                  </div>
+                  <div className="emp-input-group">
+                    <label className="emp-input-label">Time</label>
+                    <input 
+                      type="text" 
+                      className="emp-text-input" 
+                      value={editAdvFormData.time} 
+                      onChange={(e) => setEditAdvFormData({...editAdvFormData, time: e.target.value})} 
+                    />
+                  </div>
+                </div>
+                <div className="emp-input-group">
+                  <label className="emp-input-label">Reason</label>
+                  <textarea 
+                    className="emp-text-input" 
+                    style={{ height: '80px', padding: '12px', resize: 'none' }} 
+                    placeholder="Reason for advance" 
+                    value={editAdvFormData.reason} 
+                    onChange={(e) => setEditAdvFormData({...editAdvFormData, reason: e.target.value})} 
+                    required 
+                  />
+                </div>
+                <div className="modal-actions" style={{ marginTop: '10px' }}>
+                  <button type="button" className="modal-btn cancel" onClick={() => setShowEditAdvModal(false)}>Cancel</button>
+                  <button type="submit" className="modal-btn confirm" style={{ background: 'var(--primary-color)' }} disabled={submitting}>
+                    {submitting ? <div className="loader" style={{ width: '16px', height: '16px', borderTopColor: '#fff' }}></div> : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Advance Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteAdvModal && (
+          <div className="modal-overlay">
+            <motion.div 
+              className="custom-modal"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+            >
+              <div className="modal-icon-box" style={{ background: '#FEF2F2', color: 'var(--error-color)' }}>
+                <Trash2 size={32} />
+              </div>
+              <h3 className="modal-title">Delete Advance?</h3>
+              <p className="modal-text">
+                Are you sure you want to delete this advance of <strong>₹ {advToDelete?.amount}</strong> ({advToDelete?.date})?
+                This will also delete all its associated instalment records. This action cannot be undone.
+              </p>
+              <div className="modal-actions">
+                <button className="modal-btn cancel" onClick={() => { setShowDeleteAdvModal(false); setAdvToDelete(null); }} disabled={isDeletingAdv}>Cancel</button>
+                <button className="modal-btn confirm" style={{ background: 'var(--error-color)' }} onClick={handleDeleteAdvance} disabled={isDeletingAdv}>
+                  {isDeletingAdv ? <div className="loader" style={{ width: '16px', height: '16px', borderTopColor: '#fff' }}></div> : 'Delete Now'}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

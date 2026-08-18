@@ -21,11 +21,7 @@ import {
   HelpCircle,
   Receipt,
   ChevronDown,
-  ChevronUp,
-  User,
-  Users,
-  AlertCircle,
-  Maximize2
+  ChevronUp
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -115,50 +111,6 @@ const Payments = ({ storeId = null }) => {
   const [installments, setInstallments] = useState([]);
   const [installmentsLoading, setInstallmentsLoading] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
-
-  // Full Screen Pending Breakdown Modal State
-  const [showPendingModal, setShowPendingModal] = useState(false);
-  const [modalTab, setModalTab] = useState('orders'); // 'orders' or 'customers'
-  const [modalSearch, setModalSearch] = useState('');
-  const [expandedCustomerKey, setExpandedCustomerKey] = useState(null);
-
-  // Memoized Order-Wise Pending List
-  const orderPendingList = React.useMemo(() => {
-    return orders
-      .filter(o => (o.paymentStatus || 'Pending') !== 'Done' && (o.totalAmount - (o.receivedAmount || 0)) > 0.01)
-      .sort((a, b) => (b.totalAmount - (b.receivedAmount || 0)) - (a.totalAmount - (a.receivedAmount || 0)));
-  }, [orders]);
-
-  // Memoized Customer-Wise Credit List
-  const customerCreditList = React.useMemo(() => {
-    const map = {};
-    orders.forEach(order => {
-      const remaining = order.totalAmount - (order.receivedAmount || 0);
-      const isDone = (order.paymentStatus || 'Pending') === 'Done';
-      if (!isDone && remaining > 0.01) {
-        const key = (order.customerPhone || order.customerName || 'Unknown').trim();
-        if (!map[key]) {
-          map[key] = {
-            key,
-            customerName: order.customerName || 'Walk-in Customer',
-            customerPhone: order.customerPhone || 'N/A',
-            totalPending: 0,
-            ordersCount: 0,
-            orders: []
-          };
-        }
-        map[key].totalPending += remaining;
-        map[key].ordersCount += 1;
-        map[key].orders.push(order);
-      }
-    });
-    return Object.values(map).sort((a, b) => b.totalPending - a.totalPending);
-  }, [orders]);
-
-  // Total pending balance sum
-  const totalPendingBalance = React.useMemo(() => {
-    return orderPendingList.reduce((sum, o) => sum + (o.totalAmount - (o.receivedAmount || 0)), 0);
-  }, [orderPendingList]);
 
   // Subscribe to all orders
   useEffect(() => {
@@ -315,52 +267,47 @@ const Payments = ({ storeId = null }) => {
   });
 
   return (
-    <div className="pay-container">
-      {/* Upper Statistics Grid */}
-      <div className="pay-summary-grid">
-        <div className="pay-summary-card total">
-          <div className="card-info">
-            <span className="title">Total Orders</span>
-            <span className="value">{orders.length}</span>
-            <span className="desc">Active and completed system orders</span>
+    <div className="polaris-page-container">
+      {/* Polaris Header Bar */}
+      <div className="polaris-header-bar">
+        <div className="polaris-page-title-group">
+          <div className="polaris-page-title-icon">
+            <CreditCard size={24} />
           </div>
-          <div className="card-icon"><Receipt size={24} /></div>
+          <h1 className="polaris-page-title">Payments & Finance</h1>
         </div>
+      </div>
 
-        <div 
-          className="pay-summary-card pending interactive" 
-          onClick={() => setShowPendingModal(true)}
-          style={{ cursor: 'pointer' }}
-          title="Click to view full screen pending breakdown"
-        >
-          <div className="card-info">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="title">Pending Collection</span>
-              <span className="clickable-chip"><Maximize2 size={11} /> View Breakdown</span>
-            </div>
-            <span className="value">
-              ₹{totalPendingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-            <span className="desc">{orderPendingList.length} pending orders &bull; {customerCreditList.length} customer credit accounts</span>
-          </div>
-          <div className="card-icon"><Clock size={24} /></div>
+      {/* Polaris Top Metrics Summary Card */}
+      <div className="polaris-metrics-card">
+        <div className="polaris-metric-item">
+          <div className="polaris-metric-label">Total Orders</div>
+          <div className="polaris-metric-value">{orders.length}</div>
+          <div className="polaris-metric-subtext">Active system orders</div>
         </div>
-
-        <div className="pay-summary-card completed">
-          <div className="card-info">
-            <span className="title">Collected Revenue</span>
-            <span className="value">
-              ₹{orders
-                .reduce((sum, o) => sum + (o.receivedAmount || 0), 0)
-                .toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-            <span className="desc">Total funds captured in system</span>
+        <div className="polaris-metric-item">
+          <div className="polaris-metric-label">Pending Collection</div>
+          <div className="polaris-metric-value" style={{ color: '#dc2626' }}>
+            ₹{orders
+              .filter(o => (o.paymentStatus || 'Pending') !== 'Done')
+              .reduce((sum, o) => sum + (o.totalAmount - (o.receivedAmount || 0)), 0)
+              .toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <div className="card-icon"><CheckCircle size={24} /></div>
+          <div className="polaris-metric-subtext">Outstanding balances</div>
+        </div>
+        <div className="polaris-metric-item">
+          <div className="polaris-metric-label">Collected Revenue</div>
+          <div className="polaris-metric-value" style={{ color: '#16a34a' }}>
+            ₹{orders
+              .reduce((sum, o) => sum + (o.receivedAmount || 0), 0)
+              .toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="polaris-metric-subtext">Total received payments</div>
         </div>
       </div>
 
       {/* Main Section */}
+
       <div className="pay-card">
         <div className="pay-card-header">
           <div>
@@ -651,281 +598,6 @@ const Payments = ({ storeId = null }) => {
                   </div>
                 </div>
 
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Full Screen Pending Balance & Customer Credit Modal */}
-      <AnimatePresence>
-        {showPendingModal && (
-          <div className="pay-fs-overlay">
-            <motion.div 
-              className="pay-fs-modal"
-              initial={{ opacity: 0, scale: 0.98, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.98, y: 15 }}
-              transition={{ duration: 0.2 }}
-            >
-              {/* Top Executive Header */}
-              <div className="pay-fs-header">
-                <div className="pay-fs-header-title">
-                  <div className="pay-fs-badge-icon"><AlertCircle size={22} /></div>
-                  <div>
-                    <h2>Pending Collection & Customer Credit</h2>
-                    <p>Detailed view of all uncollected orders and customer credit accounts</p>
-                  </div>
-                </div>
-
-                <div className="pay-fs-header-stats">
-                  <div className="fs-stat-pill">
-                    <span className="fs-stat-label">Total Outstanding</span>
-                    <span className="fs-stat-val text-danger">₹{totalPendingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="fs-stat-pill">
-                    <span className="fs-stat-label">Pending Orders</span>
-                    <span className="fs-stat-val">{orderPendingList.length}</span>
-                  </div>
-                  <div className="fs-stat-pill">
-                    <span className="fs-stat-label">Customers with Credit</span>
-                    <span className="fs-stat-val">{customerCreditList.length}</span>
-                  </div>
-                </div>
-
-                <button className="pay-fs-close-btn" onClick={() => setShowPendingModal(false)} title="Close Modal">
-                  <X size={22} />
-                </button>
-              </div>
-
-              {/* Sub-header Navigation & Search */}
-              <div className="pay-fs-subnav">
-                <div className="pay-fs-tabs">
-                  <button 
-                    className={`pay-fs-tab-btn ${modalTab === 'orders' ? 'active' : ''}`}
-                    onClick={() => setModalTab('orders')}
-                  >
-                    <Receipt size={16} /> Order-Wise Pending ({orderPendingList.length})
-                  </button>
-                  <button 
-                    className={`pay-fs-tab-btn ${modalTab === 'customers' ? 'active' : ''}`}
-                    onClick={() => setModalTab('customers')}
-                  >
-                    <Users size={16} /> Customer-Wise Credit ({customerCreditList.length})
-                  </button>
-                </div>
-
-                <div className="pay-fs-search">
-                  <Search size={16} className="fs-search-icon" />
-                  <input 
-                    type="text" 
-                    placeholder={modalTab === 'orders' ? "Search order ID, customer name or phone..." : "Search customer name or phone..."}
-                    value={modalSearch}
-                    onChange={(e) => setModalSearch(e.target.value)}
-                  />
-                  {modalSearch && (
-                    <button className="fs-clear-search" onClick={() => setModalSearch('')}>
-                      <X size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Scrollable Modal Content */}
-              <div className="pay-fs-body">
-                {modalTab === 'orders' ? (
-                  /* TAB 1: ORDER-WISE PENDING */
-                  <div className="pay-fs-content">
-                    {(() => {
-                      const filtered = orderPendingList.filter(o => {
-                        if (!modalSearch) return true;
-                        const q = modalSearch.toLowerCase();
-                        return (
-                          (o.orderId || '').toLowerCase().includes(q) ||
-                          (o.customerName || '').toLowerCase().includes(q) ||
-                          (o.customerPhone || '').includes(modalSearch) ||
-                          (o.storeName || '').toLowerCase().includes(q)
-                        );
-                      });
-
-                      if (filtered.length === 0) {
-                        return (
-                          <div className="pay-fs-empty">
-                            <CheckCircle size={44} style={{ color: '#10b981', marginBottom: 10 }} />
-                            <h3>No Pending Orders Found</h3>
-                            <p>{modalSearch ? "No orders match your search query." : "All order accounts are fully paid and up to date!"}</p>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div className="pay-fs-table-wrapper">
-                          <table className="pay-fs-table">
-                            <thead>
-                              <tr>
-                                <th>Order ID</th>
-                                <th>Customer Details</th>
-                                {!storeId && <th>Store Location</th>}
-                                <th>Total Bill</th>
-                                <th>Paid So Far</th>
-                                <th>Pending Balance</th>
-                                <th>Payment Status</th>
-                                <th>Order Date</th>
-                                <th style={{ textAlign: 'center' }}>Action</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {filtered.map(ord => {
-                                const paid = ord.receivedAmount || 0;
-                                const remaining = ord.totalAmount - paid;
-                                const date = ord.createdAt?.toDate ? ord.createdAt.toDate().toLocaleDateString('en-IN') : 'N/A';
-
-                                return (
-                                  <tr key={ord.id}>
-                                    <td className="font-mono bold">#{ord.orderId}</td>
-                                    <td>
-                                      <div className="cust-cell">
-                                        <span className="name">{ord.customerName || 'Walk-in Customer'}</span>
-                                        <span className="phone"><Smartphone size={12} style={{ marginRight: 4 }} />{ord.customerPhone || 'N/A'}</span>
-                                      </div>
-                                    </td>
-                                    {!storeId && <td>{ord.storeName}</td>}
-                                    <td className="bold">₹{ord.totalAmount.toFixed(2)}</td>
-                                    <td className="text-success">₹{paid.toFixed(2)}</td>
-                                    <td className="text-danger bold" style={{ fontSize: '15px' }}>₹{remaining.toFixed(2)}</td>
-                                    <td>
-                                      <span className={`pay-status-badge ${getPaymentStatusClass(ord.paymentStatus || 'Pending')}`}>
-                                        {getPaymentStatusText(ord.paymentStatus || 'Pending')}
-                                      </span>
-                                    </td>
-                                    <td>{date}</td>
-                                    <td style={{ textAlign: 'center' }}>
-                                      <button 
-                                        className="pay-add-btn"
-                                        onClick={() => handleOpenPayModal(ord)}
-                                      >
-                                        <CreditCard size={14} style={{ marginRight: 6 }} /> Collect Payment
-                                      </button>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                ) : (
-                  /* TAB 2: CUSTOMER-WISE CREDIT */
-                  <div className="pay-fs-content">
-                    {(() => {
-                      const filteredCusts = customerCreditList.filter(c => {
-                        if (!modalSearch) return true;
-                        const q = modalSearch.toLowerCase();
-                        return (
-                          c.customerName.toLowerCase().includes(q) ||
-                          c.customerPhone.includes(modalSearch)
-                        );
-                      });
-
-                      if (filteredCusts.length === 0) {
-                        return (
-                          <div className="pay-fs-empty">
-                            <CheckCircle size={44} style={{ color: '#10b981', marginBottom: 10 }} />
-                            <h3>No Customer Credit Found</h3>
-                            <p>{modalSearch ? "No customer matches your search query." : "All customer credit accounts are clear!"}</p>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div className="customer-credit-grid">
-                          {filteredCusts.map(cust => {
-                            const isExpanded = expandedCustomerKey === cust.key;
-
-                            return (
-                              <div key={cust.key} className={`customer-credit-card ${isExpanded ? 'expanded' : ''}`}>
-                                <div 
-                                  className="customer-credit-header"
-                                  onClick={() => setExpandedCustomerKey(isExpanded ? null : cust.key)}
-                                >
-                                  <div className="customer-info-box">
-                                    <div className="customer-avatar">
-                                      <User size={22} />
-                                    </div>
-                                    <div>
-                                      <h3 className="cust-name">{cust.customerName}</h3>
-                                      <p className="cust-phone"><Smartphone size={12} /> {cust.customerPhone}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="customer-balance-box">
-                                    <div className="cust-pending-badge">
-                                      <span className="label">{cust.ordersCount} Pending Order{cust.ordersCount > 1 ? 's' : ''}</span>
-                                      <span className="balance-val">₹{cust.totalPending.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                    </div>
-                                    <button className="expand-toggle-btn">
-                                      {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {isExpanded && (
-                                  <div className="customer-orders-dropdown">
-                                    <div className="dropdown-title">
-                                      <span>Pending Orders Owed by <strong>{cust.customerName}</strong> ({cust.ordersCount} item{cust.ordersCount > 1 ? 's' : ''})</span>
-                                    </div>
-                                    <table className="pay-fs-table subtable">
-                                      <thead>
-                                        <tr>
-                                          <th>Order ID</th>
-                                          <th>Total Bill</th>
-                                          <th>Paid Amount</th>
-                                          <th>Credit Pending</th>
-                                          <th>Order Date</th>
-                                          <th style={{ textAlign: 'right' }}>Action</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {cust.orders.map(ord => {
-                                          const paid = ord.receivedAmount || 0;
-                                          const remaining = ord.totalAmount - paid;
-                                          const date = ord.createdAt?.toDate ? ord.createdAt.toDate().toLocaleDateString('en-IN') : 'N/A';
-
-                                          return (
-                                            <tr key={ord.id}>
-                                              <td className="font-mono bold">#{ord.orderId}</td>
-                                              <td>₹{ord.totalAmount.toFixed(2)}</td>
-                                              <td className="text-success">₹{paid.toFixed(2)}</td>
-                                              <td className="text-danger bold">₹{remaining.toFixed(2)}</td>
-                                              <td>{date}</td>
-                                              <td style={{ textAlign: 'right' }}>
-                                                <button 
-                                                  className="pay-add-btn"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleOpenPayModal(ord);
-                                                  }}
-                                                >
-                                                  <CreditCard size={13} style={{ marginRight: 4 }} /> Collect
-                                                </button>
-                                              </td>
-                                            </tr>
-                                          );
-                                        })}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
               </div>
             </motion.div>
           </div>

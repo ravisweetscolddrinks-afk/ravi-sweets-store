@@ -1,0 +1,79 @@
+/* Super Admin Billing & POS CSS */
+.sa-pos-container {
+  padding: 20px 32px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sa-pos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.sa-store-selector-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid var(--polaris-border-subtle, #e1e3e5);
+  border-radius: 10px;
+  padding: 6px 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.sa-store-selector-box label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--polaris-text-main, #303030);
+  margin: 0;
+}
+
+.sa-store-select {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-color, #0A2A1B);
+  outline: none;
+  background: #ffffff;
+}
+
+/* Fast Barcode Scanner Header Box */
+.sa-barcode-scanner-bar {
+  background: #ffffff;
+  border: 1px solid var(--polaris-border-subtle, #e1e3e5);
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.sa-barcode-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 2px solid var(--primary-color, #0A2A1B);
+  border-radius: 10px;
+  padding: 8px 14px;
+  flex: 1;
+}
+
+.sa-barcode-input-wrapper input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  font-weight: 600;
+  width: 100%;
+  color: #0f172a;
+}
