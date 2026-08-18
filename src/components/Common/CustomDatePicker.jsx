@@ -4,9 +4,7 @@ import {
   ChevronLeft, 
   ChevronRight, 
   X, 
-  Clock, 
-  CalendarDays,
-  RotateCcw
+  ChevronDown
 } from 'lucide-react';
 import './CustomDatePicker.css';
 
@@ -15,12 +13,17 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+const SHORT_MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
+
 const DAYS_OF_WEEK = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-// Helper to format ISO Date string 'YYYY-MM-DD' to Date object
+// Helper to parse 'YYYY-MM-DD' to Date object
 const parseISODate = (isoStr) => {
   if (!isoStr) return null;
-  const parts = isoStr.split('-');
+  const parts = String(isoStr).split('-');
   if (parts.length === 3) {
     const year = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10) - 1;
@@ -56,7 +59,7 @@ const formatDisplayDate = (isoStr) => {
 const CustomDatePicker = ({
   value, // 'YYYY-MM-DD' string
   onChange,
-  placeholder = 'Select date',
+  placeholder = 'Select date...',
   disabled = false,
   readOnly = false,
   name,
@@ -67,6 +70,7 @@ const CustomDatePicker = ({
   size = 'md', // 'sm' | 'md' | 'lg'
   showShortcuts = true,
   clearable = true,
+  align = 'auto', // 'auto' | 'left' | 'right'
   style = {}
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -122,7 +126,7 @@ const CustomDatePicker = ({
     setViewDate(new Date(currentYear, newMonth, 1));
   };
 
-  // Emit change event compatible with both (val) and (e) => handleInputChange(e)
+  // Emit change event
   const emitChange = (isoString) => {
     if (disabled || readOnly) return;
     if (onChange) {
@@ -291,7 +295,7 @@ const CustomDatePicker = ({
 
       {/* Floating Interactive Calendar Popover */}
       {isOpen && (
-        <div className="custom-datepicker-popover" role="dialog">
+        <div className={`custom-datepicker-popover align-${align}`} role="dialog">
           
           {/* Calendar Header with Month/Year Switchers */}
           <div className="custom-datepicker-header">
@@ -301,31 +305,37 @@ const CustomDatePicker = ({
               onClick={handlePrevMonth}
               title="Previous Month"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={15} />
             </button>
 
             <div className="datepicker-selectors">
-              <select 
-                value={currentMonth} 
-                onChange={handleMonthChange}
-                className="datepicker-month-select"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {MONTH_NAMES.map((m, idx) => (
-                  <option key={m} value={idx}>{m}</option>
-                ))}
-              </select>
+              <div className="datepicker-select-pill">
+                <select 
+                  value={currentMonth} 
+                  onChange={handleMonthChange}
+                  className="datepicker-month-select"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {MONTH_NAMES.map((m, idx) => (
+                    <option key={m} value={idx}>{SHORT_MONTHS[idx]}</option>
+                  ))}
+                </select>
+                <ChevronDown size={12} className="datepicker-pill-chevron" />
+              </div>
 
-              <select 
-                value={currentYear} 
-                onChange={handleYearChange}
-                className="datepicker-year-select"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {yearOptions.map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
+              <div className="datepicker-select-pill">
+                <select 
+                  value={currentYear} 
+                  onChange={handleYearChange}
+                  className="datepicker-year-select"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {yearOptions.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+                <ChevronDown size={12} className="datepicker-pill-chevron" />
+              </div>
             </div>
 
             <button 
@@ -334,7 +344,7 @@ const CustomDatePicker = ({
               onClick={handleNextMonth}
               title="Next Month"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={15} />
             </button>
           </div>
 
@@ -391,11 +401,13 @@ const CustomDatePicker = ({
           </div>
 
           {/* Footer with Selected Value Info */}
-          <div className="datepicker-footer">
-            <span className="datepicker-footer-label">
-              {value ? `Selected: ${formatDisplayDate(value)}` : 'No date selected'}
-            </span>
-          </div>
+          {value && (
+            <div className="datepicker-footer">
+              <span className="datepicker-footer-label">
+                Selected: <strong>{formatDisplayDate(value)}</strong>
+              </span>
+            </div>
+          )}
 
         </div>
       )}

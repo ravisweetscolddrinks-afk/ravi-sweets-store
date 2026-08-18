@@ -1478,33 +1478,8 @@ const Orders = () => {
                 placeholder="Pick date..."
                 value={deliveryDateFilter}
                 onChange={(e) => setDeliveryDateFilter(e.target.value)}
+                align="right"
               />
-            </div>
-
-            <div className="ord-chip-bar">
-              <button
-                type="button"
-                className={`ord-quick-chip ${deliveryDateFilter === getTodayStr() ? 'active' : ''}`}
-                onClick={() => setDeliveryDateFilter(getTodayStr())}
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                className={`ord-quick-chip ${deliveryDateFilter === getTomorrowStr() ? 'active' : ''}`}
-                onClick={() => setDeliveryDateFilter(getTomorrowStr())}
-              >
-                Tomorrow
-              </button>
-              {deliveryDateFilter && (
-                <button
-                  type="button"
-                  className="ord-quick-chip clear"
-                  onClick={() => setDeliveryDateFilter('')}
-                >
-                  <X size={12} /> Clear Date
-                </button>
-              )}
             </div>
           </div>
         </div>
