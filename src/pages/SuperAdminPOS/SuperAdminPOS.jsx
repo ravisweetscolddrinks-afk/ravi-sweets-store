@@ -547,7 +547,7 @@ const SuperAdminPOS = () => {
                   .map(item => {
                     const inCart = cart.find(c => c.id === item.id);
                     return (
-                      <div key={item.id} className="st-pos-item-card" onClick={() => handleItemClick(item)}>
+                      <div key={item.id} className={`st-pos-item-card ${inCart ? 'active' : ''}`} onClick={() => handleItemClick(item)}>
                         <div className="st-pos-item-img">
                           <img 
                             src={(!item.image || typeof item.image !== 'string' || item.image.trim() === "" || item.image.toLowerCase() === "none" || item.image.toLowerCase() === "null" || item.image.includes('unsplash')) ? DEFAULT_ITEM_IMAGE : item.image}

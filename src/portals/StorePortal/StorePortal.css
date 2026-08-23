@@ -343,17 +343,28 @@
 }
 
 .st-pos-item-card {
-  border: 1.5px solid #cbd5e1;
+  border: 1.5px solid #e2e8f0;
   border-radius: 12px;
   overflow: hidden;
   transition: all 0.2s ease;
-  background: #f8fafc;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .st-pos-item-card:hover {
-  border-color: #94a3b8;
+  border-color: var(--primary-light, #4ea1eb);
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.07);
+}
+
+.st-pos-item-card:active {
+  transform: translateY(0);
+}
+
+.st-pos-item-card.active {
+  border: 2px solid var(--primary-color, #348bdd);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(52, 139, 221, 0.15), 0 4px 12px rgba(52, 139, 221, 0.12);
 }
 
 .st-pos-item-img {

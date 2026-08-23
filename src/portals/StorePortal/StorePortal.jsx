@@ -3376,7 +3376,7 @@ const StorePortal = () => {
                       .map(item => {
                         const inCart = cart.find(c => c.id === item.id);
                         return (
-                          <div key={item.id} className="st-pos-item-card">
+                          <div key={item.id} className={`st-pos-item-card ${inCart ? 'active' : ''}`}>
                             <div className="st-pos-item-img" onClick={() => handleItemClick(item)}>
                               <img 
                                 src={(!item.image || typeof item.image !== 'string' || item.image.trim() === "" || item.image.toLowerCase() === "none" || item.image.toLowerCase() === "null" || item.image.includes('unsplash')) ? DEFAULT_ITEM_IMAGE : item.image} 
