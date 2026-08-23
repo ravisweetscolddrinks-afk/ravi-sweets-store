@@ -254,8 +254,8 @@
 .st-pos-catalogue {
   border: 1.5px solid #e2e8f0;
   border-radius: 16px;
-  background: white;
-  padding: 20px;
+  /* background: white; */
+  /* padding: 20px; */
 }
 
 .st-catalogue-header {
@@ -305,11 +305,29 @@
 
 .st-catalogue-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 16px;
-  max-height: 480px;
-  overflow-y: auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  max-height: 520px;
+  /* overflow-y: auto; */
   padding-right: 4px;
+}
+
+@media (max-width: 1200px) {
+  .st-catalogue-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .st-catalogue-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .st-catalogue-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* POS Scrollbar widths */
@@ -684,7 +702,7 @@
   max-height: 85vh;
   background: white;
   border-radius: 18px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -961,9 +979,20 @@
 }
 
 @keyframes btPulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.7; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* Connected Device Banner */
@@ -1071,13 +1100,30 @@
   opacity: 0;
 }
 
-.circle-1 { animation-delay: 0s !important; }
-.circle-2 { animation-delay: 0.6s !important; }
-.circle-3 { animation-delay: 1.2s !important; }
+.circle-1 {
+  animation-delay: 0s !important;
+}
+
+.circle-2 {
+  animation-delay: 0.6s !important;
+}
+
+.circle-3 {
+  animation-delay: 1.2s !important;
+}
 
 @keyframes radarWave {
-  0% { width: 80px; height: 80px; opacity: 0.8; }
-  100% { width: 180px; height: 180px; opacity: 0; }
+  0% {
+    width: 80px;
+    height: 80px;
+    opacity: 0.8;
+  }
+
+  100% {
+    width: 180px;
+    height: 180px;
+    opacity: 0;
+  }
 }
 
 .scan-pulse-text {
@@ -1227,8 +1273,13 @@
 
 /* Spin animation for QZ Tray connecting state */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spin-icon {
@@ -1237,8 +1288,17 @@
 
 /* Pulse animation for BT scanner icon */
 @keyframes pulse-scale {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.7; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
 }
 
 .pulse-icon {
@@ -1358,7 +1418,8 @@
 
 .ws-preview-qty {
   font-weight: 800;
-  color: #b45309; /* Warm brown/gold */
+  color: #b45309;
+  /* Warm brown/gold */
   font-size: 13px;
 }
 
@@ -1754,23 +1815,53 @@
 
 /* Animations */
 @keyframes laser-sweep {
-  0%, 100% { top: 0%; }
-  50% { top: 100%; }
+
+  0%,
+  100% {
+    top: 0%;
+  }
+
+  50% {
+    top: 100%;
+  }
 }
 
 @keyframes radar-expand {
-  0% { transform: scale(0.2); opacity: 0.8; }
-  100% { transform: scale(1.1); opacity: 0; }
+  0% {
+    transform: scale(0.2);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1.1);
+    opacity: 0;
+  }
 }
 
 @keyframes pulse-dot {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 8px #a855f7; }
-  50% { transform: scale(1.25); box-shadow: 0 0 16px #a855f7; }
+
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 8px #a855f7;
+  }
+
+  50% {
+    transform: scale(1.25);
+    box-shadow: 0 0 16px #a855f7;
+  }
 }
 
 @keyframes slide-up-alert {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Live Camera Scanner Styles */
@@ -1792,8 +1883,15 @@
 }
 
 @keyframes laser-sweep-camera {
-  0%, 100% { top: 0%; }
-  50% { top: 100%; }
+
+  0%,
+  100% {
+    top: 0%;
+  }
+
+  50% {
+    top: 100%;
+  }
 }
 
 .st-open-camera-btn:hover {
@@ -1813,4 +1911,3 @@
   object-fit: cover !important;
   border-radius: 10px;
 }
-

@@ -1,4 +1,6 @@
 /* Super Admin Billing & POS CSS */
+@import '../../portals/StorePortal/StorePortal.css';
+
 .sa-pos-container {
   padding: 20px 32px 40px;
   max-width: 1400px;
