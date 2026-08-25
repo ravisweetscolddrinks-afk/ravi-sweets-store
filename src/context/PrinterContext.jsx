@@ -512,7 +512,7 @@ export const PrinterProvider = ({ children }) => {
             </style>
           </head>
           <body>
-            <div style="font-size: 16px; font-weight: bold;">RAVI GHEE SWEETS</div>
+            <div style="font-size: 16px; font-weight: bold;">RAVI SWEETS AND COOL DRINKS</div>
             <div>RK3568 POS THERMAL PRINTER</div>
             <div class="divider"></div>
             <div>STATUS: ONLINE & ACTIVE</div>
@@ -601,7 +601,7 @@ export const PrinterProvider = ({ children }) => {
             </style>
           </head>
           <body>
-            <div style="font-size: 16px; font-weight: bold;">RAVI GHEE SWEETS</div>
+            <div style="font-size: 16px; font-weight: bold;">RAVI SWEETS AND COOL DRINKS</div>
             <div>WI-FI NETWORK THERMAL PRINTER</div>
             <div class="divider"></div>
             <div>STATUS: ONLINE & CONNECTED</div>

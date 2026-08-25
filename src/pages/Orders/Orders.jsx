@@ -1085,7 +1085,7 @@ const Orders = () => {
         state: customer.state || '',
         storeId: selectedStore,
         storeName: store?.name || '',
-        tradeName: store?.tradeName || store?.name || 'Ravi Ghee Sweets',
+        tradeName: store?.tradeName || store?.name || 'Ravi Sweets and Cool Drinks',
         storeGstNumber: store?.gstNumber || '',
         storeAddress: store?.address || '',
         storePhone: store?.phone || '',
@@ -2651,7 +2651,7 @@ const Orders = () => {
                 <div className="ord-preview-body">
                   <div className="ord-preview-top" style={{ marginBottom: '15px' }}>
                     <div>
-                      <h3>Ravi Ghee Sweets</h3>
+                      <h3>Ravi Sweets and Cool Drinks</h3>
                       <p>{previewOrder.storeName}</p>
                       <p style={{ marginTop: '6px' }}>
                         <strong>Order:</strong> {previewOrder.serialNumber ? `S${previewOrder.serialNumber}-${previewOrder.orderId}` : `#${previewOrder.orderId}`}

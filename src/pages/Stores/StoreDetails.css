@@ -757,5 +757,16 @@ tr.row-expanded > td {
   .orders-table td:nth-child(5) {
     display: none !important;
   }
+  .billing-item-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .billing-item-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
 }
 

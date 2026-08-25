@@ -648,7 +648,7 @@ const Dashboard = () => {
                 <div className="ord-preview-body">
                   <div className="ord-preview-top" style={{ marginBottom: '15px' }}>
                     <div>
-                      <h3>Ravi Ghee Sweets</h3>
+                      <h3>Ravi Sweets and Cool Drinks</h3>
                       <p>{previewOrder.storeName}</p>
                       <p style={{ marginTop: '6px' }}><strong>Order:</strong> #{previewOrder.orderId}</p>
                       <p style={{ color: 'var(--primary-color)', fontWeight: '700', marginTop: '2px' }}>

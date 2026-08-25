@@ -106,7 +106,7 @@ export const initForegroundNotifications = async () => {
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log('📬 Foreground FCM message received:', payload);
 
-      const title = payload.notification?.title || '🔔 Ravi Ghee Sweets';
+      const title = payload.notification?.title || '🔔 Ravi Sweets and Cool Drinks';
       const body = payload.notification?.body || 'You have a new update';
 
       // Show an in-app toast notification

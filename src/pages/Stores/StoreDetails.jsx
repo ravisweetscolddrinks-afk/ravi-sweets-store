@@ -279,8 +279,8 @@ const StoreDetails = () => {
       const billData = {
         billId,
         storeId: id,
-        storeName: store?.name || 'Ravi Ghee Sweets',
-        tradeName: store?.tradeName || store?.name || 'Ravi Ghee Sweets',
+        storeName: store?.name || 'Ravi Sweets and Cool Drinks',
+        tradeName: store?.tradeName || store?.name || 'Ravi Sweets and Cool Drinks',
         storeGstNumber: store?.gstNumber || '',
         storeAddress: store?.address || '',
         storePhone: store?.phone || '',

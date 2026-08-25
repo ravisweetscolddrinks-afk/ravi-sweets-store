@@ -8,6 +8,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  box-sizing: border-box;
 }
 
 .sa-pos-header {
@@ -16,6 +17,13 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
+}
+
+.sa-pos-selectors-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .sa-store-selector-box {
@@ -34,6 +42,7 @@
   font-weight: 700;
   color: var(--polaris-text-main, #303030);
   margin: 0;
+  white-space: nowrap;
 }
 
 .sa-store-select {
@@ -52,10 +61,10 @@
   background: #ffffff;
   border: 1px solid var(--polaris-border-subtle, #e1e3e5);
   border-radius: 12px;
-  padding: 14px 20px;
+  padding: 12px 18px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
@@ -64,10 +73,11 @@
   align-items: center;
   gap: 8px;
   background: #f8fafc;
-  border: 2px solid var(--primary-color, #0A2A1B);
+  border: 1.5px solid var(--primary-color, #0A2A1B);
   border-radius: 10px;
   padding: 8px 14px;
   flex: 1;
+  min-width: 0;
 }
 
 .sa-barcode-input-wrapper input {
@@ -79,3 +89,103 @@
   width: 100%;
   color: #0f172a;
 }
+
+.sa-pos-tabs {
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sa-pos-tabs button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Modal Overlay & Cards for POS */
+.walkin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.walkin-modal-card {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 1024px) {
+  .sa-pos-container {
+    padding: 16px 20px 36px;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sa-pos-container {
+    padding: 12px 14px 30px;
+    gap: 14px;
+  }
+
+  .sa-pos-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .sa-pos-selectors-group {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .sa-store-selector-box {
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: space-between;
+    min-width: 0 !important;
+  }
+
+  .sa-barcode-scanner-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .sa-barcode-scanner-bar button {
+    width: 100%;
+    justify-content: center;
+    height: 38px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sa-pos-container {
+    padding: 10px 10px 24px;
+    gap: 12px;
+  }
+
+  .walkin-modal-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+}
+

@@ -357,7 +357,7 @@ const SuperAdminPOS = () => {
         billId,
         storeId: selectedStoreId,
         storeName: selectedStoreName || selectedStoreObj?.name || 'Outlet Store',
-        tradeName: selectedStoreObj?.tradeName || selectedStoreObj?.name || 'Ravi Ghee Sweets',
+        tradeName: selectedStoreObj?.tradeName || selectedStoreObj?.name || 'Ravi Sweets and Cool Drinks',
         storeGstNumber: selectedStoreObj?.gstNumber || '',
         storeAddress: selectedStoreObj?.address || '',
         storePhone: selectedStoreObj?.phone || '',
@@ -464,7 +464,7 @@ const SuperAdminPOS = () => {
         </div>
 
         {/* Store Selector & Billing Date */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        <div className="sa-pos-selectors-group">
           <div className="sa-store-selector-box" style={{ minWidth: '220px' }}>
             <label>Active Store Outlet:</label>
             <CustomDropdown 
@@ -491,7 +491,7 @@ const SuperAdminPOS = () => {
       </div>
 
       {/* Tabs: Active POS Terminal vs Saved (Parked) Bills */}
-      <div style={{ display: 'flex', gap: '10px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
+      <div className="sa-pos-tabs">
         <button 
           className={`polaris-btn ${activeTab === 'pos' ? 'polaris-btn-primary' : 'polaris-btn-secondary'}`}
           onClick={() => setActiveTab('pos')}

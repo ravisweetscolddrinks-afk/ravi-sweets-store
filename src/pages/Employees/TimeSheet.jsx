@@ -645,7 +645,7 @@ const TimeSheet = () => {
         </head>
         <body>
           <div class="header">
-            <h1>Ravi Ghee Sweets</h1>
+            <h1>Ravi Sweets and Cool Drinks</h1>
             <p>Employee Monthly Salary Slip</p>
           </div>
 
@@ -755,7 +755,7 @@ const TimeSheet = () => {
 
           <div class="footer">
             <p>This is a computer generated document and does not require signature.</p>
-            <p>© ${selectedYear} Ravi Ghee Sweets. All rights reserved.</p>
+            <p>© ${selectedYear} Ravi Sweets and Cool Drinks. All rights reserved.</p>
           </div>
         </body>
       </html>
@@ -1254,7 +1254,7 @@ const TimeSheet = () => {
 
                 <div className="payslip-print-area">
                   <div className="payslip-brand">
-                    <h2>Ravi Ghee Sweets</h2>
+                    <h2>Ravi Sweets and Cool Drinks</h2>
                     <p>Employee Monthly Payslip</p>
                   </div>
 

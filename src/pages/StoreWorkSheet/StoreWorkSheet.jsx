@@ -245,7 +245,7 @@ const StoreWorkSheet = () => {
 
     // Header
     bytes.push(...CENTER, ...DOUBLE_SIZE);
-    bytes.push(...encoder.encode("RAVI GHEE SWEETS\n"));
+    bytes.push(...encoder.encode("RAVI SWEETS AND COOL DRINKS\n"));
     bytes.push(...NORMAL_SIZE);
     bytes.push(...encoder.encode("STORE WORK SHEET\n"));
     bytes.push(...LEFT);
@@ -505,7 +505,7 @@ const StoreWorkSheet = () => {
           </style>
         </head>
         <body>
-          <div class="text-center bold header">RAVI GHEE SWEETS</div>
+          <div class="text-center bold header">RAVI SWEETS AND COOL DRINKS</div>
           <div class="text-center subheader">STORE WORK SHEET</div>
           <div class="divider"></div>
           <div><strong>DATE:</strong> ${worksheet.date}</div>

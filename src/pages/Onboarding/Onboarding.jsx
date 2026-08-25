@@ -112,8 +112,8 @@ const Onboarding = () => {
       <header className="onb-top-header">
         <div className="onb-header-left">
           <div className="onb-logo-wrapper">
-            <img src={logo} alt="Ravi Ghee Sweets" className="onb-logo-img" />
-            <span className="onb-brand-title">Ravi Ghee Sweets</span>
+            <img src={logo} alt="Ravi Sweets and Cool Drinks" className="onb-logo-img" />
+            <span className="onb-brand-title">Ravi Sweets and Cool Drinks</span>
           </div>
           <span className="onb-season-tag">Portal Gateway</span>
         </div>

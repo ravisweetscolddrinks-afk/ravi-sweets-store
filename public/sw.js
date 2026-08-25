@@ -20,7 +20,7 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Background FCM message received:', payload);
 
-  const notificationTitle = payload.notification?.title || '🔔 Ravi Ghee Sweets';
+  const notificationTitle = payload.notification?.title || '🔔 Ravi Sweets and Cool Drinks';
   const notificationOptions = {
     body: payload.notification?.body || 'You have a new update',
     icon: '/logo.png',

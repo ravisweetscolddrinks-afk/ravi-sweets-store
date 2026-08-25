@@ -127,7 +127,7 @@ export function getInvoiceHtml(order) {
   }
 
   // Retrieve store/seller details
-  const storeName = order.storeName || 'Ravi Ghee Sweets';
+  const storeName = order.storeName || 'Ravi Sweets and Cool Drinks';
   const sellerGSTIN = '37AEQPK1348P1ZS'; // Official GSTIN
 
   const tableHeadersHtml = isIntrastate
@@ -374,7 +374,7 @@ export function getInvoiceHtml(order) {
             <tr>
               <td>
                 <img src="${logo}" alt="Logo" class="logo" /><br/>
-                <strong style="font-size: 16px; color: var(--primary-color, #1e40af);">RAVI GHEE SWEETS</strong><br/>
+                <strong style="font-size: 16px; color: var(--primary-color, #1e40af);">RAVI SWEETS AND COOL DRINKS</strong><br/>
                 <span>Store: ${storeName}</span><br/>
                 <span>Andhra Pradesh, India</span><br/>
                 <strong>GSTIN: ${sellerGSTIN}</strong>
@@ -402,7 +402,7 @@ export function getInvoiceHtml(order) {
             <tbody>
               <tr>
                 <td>
-                  <strong>RAVI GHEE SWEETS</strong><br/>
+                  <strong>RAVI SWEETS AND COOL DRINKS</strong><br/>
                   Store Location: ${storeName}<br/>
                   Andhra Pradesh, India<br/>
                   GSTIN: <strong>${sellerGSTIN}</strong><br/>
@@ -445,7 +445,7 @@ export function getInvoiceHtml(order) {
                 <div style="margin-top: 12px; border-top: 1px dashed #ddd; padding-top: 8px;">
                   <strong style="color: var(--primary-color, #1e40af);">Bank Details for Payment:</strong><br/>
                   <strong>Bank Name:</strong> HDFC Bank<br/>
-                  <strong>Account Name:</strong> RAVI GHEE SWEETS<br/>
+                  <strong>Account Name:</strong> RAVI SWEETS AND COOL DRINKS<br/>
                   <strong>Account Number:</strong> 50200046843751<br/>
                   <strong>IFSC Code:</strong> HDFC0009088<br/>
                   <strong>Branch:</strong> Satyanayanapuram, vijayawada
@@ -489,7 +489,7 @@ export function getInvoiceHtml(order) {
             </div>
             <div style="float: right; width: 40%; text-align: right;">
               <div class="signature-box">
-                <span style="font-size: 10px; color: #555;">for Ravi Ghee Sweets</span><br/><br/><br/>
+                <span style="font-size: 10px; color: #555;">for Ravi Sweets and Cool Drinks</span><br/><br/><br/>
                 <strong>Authorized Signatory</strong>
               </div>
             </div>

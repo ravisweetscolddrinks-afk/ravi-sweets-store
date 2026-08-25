@@ -464,7 +464,7 @@ export const buildOrderESCPOS = (order, charsPerLine = 48) => {
 
   // Header
   bytes.push(...CENTER, ...DOUBLE_SIZE);
-  bytes.push(...encoder.encode('RAVI GHEE SWEETS\n'));
+  bytes.push(...encoder.encode('RAVI SWEETS AND COOL DRINKS\n'));
   bytes.push(...NORMAL_SIZE);
   bytes.push(...encoder.encode(`${order.storeName || 'Outlet Store'}\n`));
   bytes.push(...encoder.encode('Quality Sweets & Savouries\n'));

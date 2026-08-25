@@ -1,5 +1,5 @@
 /**
- * Receipt Printing Helper for Ravi Ghee Sweets
+ * Receipt Printing Helper for Ravi Sweets and Cool Drinks
  * Generates exact ESC/POS binary data and HTML layouts matching physical thermal receipts.
  */
 

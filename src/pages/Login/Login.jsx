@@ -171,8 +171,8 @@ const Login = () => {
         transition={{ duration: 0.5 }}
       >
         <div className="login-logo-container">
-          <img src={logo} alt="Ravi Ghee Sweets" style={{ width: '80px', height: '80px', objectFit: 'contain', marginBottom: '16px', borderRadius: '12px' }} />
-          <h1 style={{ fontSize: '32px', color: 'var(--primary-color)', marginBottom: '4px', fontWeight: '800' }}>Ravi Ghee Sweets</h1>
+          <img src={logo} alt="Ravi Sweets and Cool Drinks" style={{ width: '80px', height: '80px', objectFit: 'contain', marginBottom: '16px', borderRadius: '12px' }} />
+          <h1 style={{ fontSize: '32px', color: 'var(--primary-color)', marginBottom: '4px', fontWeight: '800' }}>Ravi Sweets and Cool Drinks</h1>
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', fontWeight: '500' }}>Authentic Traditional Flavors</p>
         </div>
 

@@ -337,7 +337,7 @@ const PUnitPortal = () => {
         bytes.push(...INIT);
         bytes.push(...CENTER);
         bytes.push(...DOUBLE_SIZE);
-        bytes.push(...encoder.encode("RAVI GHEE SWEETS\n"));
+        bytes.push(...encoder.encode("RAVI SWEETS AND COOL DRINKS\n"));
         bytes.push(...NORMAL_SIZE);
         bytes.push(...encoder.encode("Quality Sweets & Savouries\n"));
         bytes.push(...encoder.encode(separator));
@@ -450,7 +450,7 @@ const PUnitPortal = () => {
 
         bytes.push(...CENTER);
         bytes.push(...DOUBLE_SIZE);
-        bytes.push(...encoder.encode("RAVI GHEE SWEETS\n"));
+        bytes.push(...encoder.encode("RAVI SWEETS AND COOL DRINKS\n"));
         bytes.push(...NORMAL_SIZE);
         bytes.push(...encoder.encode("Quality Sweets & Savouries\n"));
         bytes.push(...encoder.encode(separator));
@@ -673,7 +673,7 @@ const PUnitPortal = () => {
 
         return `
                 <div class="slip">
-                  <div class="title">Ravi Ghee Sweets</div>
+                  <div class="title">Ravi Sweets and Cool Drinks</div>
                   <div class="subtitle">Quality Sweets & Savouries</div>
                   
                   <div class="box-header">BOX ${box.boxNum} OF ${boxesList.length}</div>

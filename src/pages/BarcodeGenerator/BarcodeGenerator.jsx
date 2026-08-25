@@ -413,7 +413,7 @@ const BarcodeGenerator = () => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Barcodes - Ravi Ghee Sweets</title>
+          <title>Barcodes - Ravi Sweets and Cool Drinks</title>
           <style>
             @page {
               size: 104mm auto;

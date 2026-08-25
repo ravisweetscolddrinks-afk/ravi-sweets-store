@@ -1893,7 +1893,7 @@ const StorePortal = () => {
         city: customer.city || '',
         state: customer.state || '',
         storeId: id,
-        storeName: store?.name || 'Ravi Ghee Sweets',
+        storeName: store?.name || 'Ravi Sweets and Cool Drinks',
         pUnitId: selectedPUnit,
         globalDescription,
         mUnitDescription,
@@ -2169,8 +2169,8 @@ const StorePortal = () => {
       const billData = {
         billId,
         storeId: id,
-        storeName: store?.name || 'Ravi Ghee Sweets',
-        tradeName: store?.tradeName || store?.name || 'Ravi Ghee Sweets',
+        storeName: store?.name || 'Ravi Sweets and Cool Drinks',
+        tradeName: store?.tradeName || store?.name || 'Ravi Sweets and Cool Drinks',
         storeGstNumber: store?.gstNumber || '',
         storeAddress: store?.address || '',
         storePhone: store?.phone || '',
@@ -3325,17 +3325,7 @@ const StorePortal = () => {
                 {/* Fast USB Barcode Gun Scanner Input Bar */}
                 <form 
                   onSubmit={handleStBarcodeSubmit}
-                  style={{
-                    background: '#ffffff',
-                    border: '1.5px solid var(--primary-color)',
-                    borderRadius: '12px',
-                    padding: '12px 18px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    marginBottom: '16px',
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.04)'
-                  }}
+                  className="st-barcode-scanner-bar"
                 >
                   <Barcode size={22} color="var(--primary-color)" />
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '6px 12px' }}>
@@ -4402,7 +4392,7 @@ const StorePortal = () => {
 
               <div className="receipt-print-area">
                 <div className="receipt-brand">
-                  <h2>Ravi Ghee Sweets</h2>
+                  <h2>Ravi Sweets and Cool Drinks</h2>
                   <p>{selectedReceiptBill.storeName || 'Outlet Store'}</p>
                 </div>
 
@@ -5217,7 +5207,7 @@ const StorePortal = () => {
                 <div className="ord-preview-body">
                   <div className="ord-preview-top" style={{ marginBottom: '15px' }}>
                     <div>
-                      <h3>Ravi Ghee Sweets</h3>
+                      <h3>Ravi Sweets and Cool Drinks</h3>
                       <p>{previewOrder.storeName}</p>
                       <p style={{ marginTop: '6px' }}>
                         <strong>Order:</strong> {previewOrder.serialNumber ? `S${previewOrder.serialNumber}-${previewOrder.orderId}` : `#${previewOrder.orderId}`}
