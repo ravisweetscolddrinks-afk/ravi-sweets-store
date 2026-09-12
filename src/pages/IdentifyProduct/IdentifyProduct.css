@@ -523,6 +523,52 @@
   font-weight: 500;
 }
 
+/* Side-by-Side Visual Verification */
+.identify-visual-comparison {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 14px;
+  gap: 10px;
+}
+
+.identify-comp-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.identify-comp-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.identify-comp-img {
+  width: 58px;
+  height: 58px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1.5px solid var(--border-color);
+  background: #ffffff;
+}
+
+.identify-comp-vs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--primary-color);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 /* Product Info */
 .identify-product-summary {
   display: flex;

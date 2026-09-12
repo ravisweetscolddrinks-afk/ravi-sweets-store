@@ -19,11 +19,18 @@ import {
   Volume2,
   VolumeX,
   FlipHorizontal,
-  ChevronRight
+  ChevronRight,
+  Eye,
+  SlidersHorizontal
 } from 'lucide-react';
 import { db } from '../../config/firebase';
 import { collection, getDocs, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { subscribeStoreStock, saveItemStock } from '../../utils/stockService';
+import {
+  extractImageFeatures,
+  compareFeatures,
+  extractFeaturesFromUrl
+} from '../../utils/visualMatcher';
 import CustomDropdown from '../../components/Common/CustomDropdown';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -41,6 +48,10 @@ const IdentifyProduct = () => {
   const [storeStockMap, setStoreStockMap] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // In-memory cache of pre-extracted product visual features: { [itemId]: features }
+  const catalogFeaturesRef = useRef({});
+  const [indexedCount, setIndexedCount] = useState(0);
+
   // Camera & Scanner states
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -51,9 +62,9 @@ const IdentifyProduct = () => {
   const [scannerPaused, setScannerPaused] = useState(false);
   const streamRef = useRef(null);
   const scanIntervalRef = useRef(null);
-  const html5QrCodeRef = useRef(null);
 
-  // Matched product & stock addition states
+  // Matched product & captured frame states
+  const [capturedSnapshot, setCapturedSnapshot] = useState(null);
   const [matchedProduct, setMatchedProduct] = useState(null);
   const [candidateMatches, setCandidateMatches] = useState([]);
   const [addQuantity, setAddQuantity] = useState('1');
@@ -64,7 +75,7 @@ const IdentifyProduct = () => {
   // Fallback search
   const [searchFallback, setSearchFallback] = useState('');
 
-  // Audio beep on match
+  // Audio confirmation beep
   const playBeep = () => {
     if (!soundEnabled) return;
     try {
@@ -72,19 +83,17 @@ const IdentifyProduct = () => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
       gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.18);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.2);
-    } catch (e) {
-      // AudioContext might be restricted until user gesture
-    }
+    } catch (e) {}
   };
 
-  // Fetch Stores & Categories
+  // 1. Fetch Stores & Categories
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -108,11 +117,12 @@ const IdentifyProduct = () => {
     fetchInitialData();
   }, []);
 
-  // Fetch Items Catalog
+  // 2. Fetch Items Catalog
   useEffect(() => {
     const q = query(collection(db, 'items'), orderBy('name', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
-      setItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const allItems = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setItems(allItems);
       setLoading(false);
     }, (err) => {
       console.error(err);
@@ -122,7 +132,33 @@ const IdentifyProduct = () => {
     return () => unsub();
   }, []);
 
-  // Subscribe to store stock for selected store
+  // 3. Pre-index and cache visual signatures for all catalog items that have photos
+  useEffect(() => {
+    if (!items || items.length === 0) return;
+
+    let count = 0;
+    items.forEach((item) => {
+      const imgUrl = item.image;
+      if (!imgUrl || typeof imgUrl !== 'string' || imgUrl.trim() === '' || imgUrl === DEFAULT_ITEM_IMAGE) {
+        return;
+      }
+      if (catalogFeaturesRef.current[item.id]) {
+        count++;
+        return;
+      }
+
+      extractFeaturesFromUrl(imgUrl)
+        .then((features) => {
+          catalogFeaturesRef.current[item.id] = features;
+          setIndexedCount(prev => prev + 1);
+        })
+        .catch(() => {
+          // silently skip inaccessible images
+        });
+    });
+  }, [items]);
+
+  // 4. Subscribe to store stock for selected store
   useEffect(() => {
     if (!selectedStoreId) return;
     const unsub = subscribeStoreStock(selectedStoreId, (stockMap) => {
@@ -131,30 +167,7 @@ const IdentifyProduct = () => {
     return () => unsub();
   }, [selectedStoreId]);
 
-  // Helper to extract image color signature for visual similarity
-  const computeColorSignature = (canvas, ctx) => {
-    try {
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-      let rTotal = 0, gTotal = 0, bTotal = 0;
-      const step = 4 * 8; // sample every 8th pixel
-      let count = 0;
-      for (let i = 0; i < imgData.length; i += step) {
-        rTotal += imgData[i];
-        gTotal += imgData[i + 1];
-        bTotal += imgData[i + 2];
-        count++;
-      }
-      return {
-        r: Math.round(rTotal / count),
-        g: Math.round(gTotal / count),
-        b: Math.round(bTotal / count)
-      };
-    } catch (e) {
-      return { r: 128, g: 128, b: 128 };
-    }
-  };
-
-  // Camera Management
+  // 5. Camera Management
   const startCamera = async () => {
     setCameraError(null);
     stopCamera();
@@ -208,21 +221,18 @@ const IdentifyProduct = () => {
     setCameraFacing(prev => (prev === 'environment' ? 'user' : 'environment'));
   };
 
-  // Auto-start camera on mount
   useEffect(() => {
     startCamera();
     return () => stopCamera();
   }, [cameraFacing]);
 
-  // Real-time Barcode Detection using Native BarcodeDetector (Chrome/Edge/Android) or Canvas scanning
+  // 6. Real-time Barcode Detection
   const startAutoScanner = () => {
     if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
 
-    // Run scanner every 600ms
     scanIntervalRef.current = setInterval(async () => {
       if (scannerPaused || !videoRef.current || videoRef.current.readyState < 2) return;
 
-      // 1. Try Native BarcodeDetector if available in browser
       if ('BarcodeDetector' in window) {
         try {
           const barcodeDetector = new window.BarcodeDetector({
@@ -234,14 +244,11 @@ const IdentifyProduct = () => {
             handleBarcodeFound(rawCode);
             return;
           }
-        } catch (e) {
-          // BarcodeDetector frame skip
-        }
+        } catch (e) {}
       }
     }, 600);
   };
 
-  // When a barcode is detected by camera
   const handleBarcodeFound = (barcodeStr) => {
     if (!barcodeStr || scannerPaused) return;
 
@@ -253,6 +260,7 @@ const IdentifyProduct = () => {
     if (matched) {
       playBeep();
       setScannerPaused(true);
+      setCapturedSnapshot(null);
       setMatchedProduct({ ...matched, matchConfidence: 100, matchReason: `Exact Barcode Match (${barcodeStr})` });
       setCandidateMatches([]);
       setAddQuantity(matched.unit === 'Weight' ? '1.0' : '1');
@@ -260,7 +268,7 @@ const IdentifyProduct = () => {
     }
   };
 
-  // Manual Frame Capture & Visual Recognition
+  // 7. Manual Frame Capture & Real Product Image Comparison
   const captureAndIdentify = async () => {
     if (!videoRef.current || videoRef.current.readyState < 2) {
       toast.error("Camera is not ready yet");
@@ -272,22 +280,19 @@ const IdentifyProduct = () => {
 
     try {
       const video = videoRef.current;
-      const canvas = canvasRef.current || document.createElement('canvas');
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const vWidth = video.videoWidth || 640;
+      const vHeight = video.videoHeight || 480;
 
-      // Check native barcode detector on static frame first
+      // Check native barcode detector first
       if ('BarcodeDetector' in window) {
         try {
           const barcodeDetector = new window.BarcodeDetector({
             formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'qr_code']
           });
-          const barcodes = await barcodeDetector.detect(canvas);
+          const barcodes = await barcodeDetector.detect(video);
           if (barcodes && barcodes.length > 0) {
-            const code = barcodes[0].rawValue;
-            const matched = items.find(i => (i.barcode && i.barcode.trim() === code.trim()) || i.id === code);
+            const code = (barcodes[0].rawValue || '').trim();
+            const matched = items.find(i => (i.barcode && i.barcode.trim().toLowerCase() === code.toLowerCase()) || i.id === code);
             if (matched) {
               playBeep();
               setMatchedProduct({ ...matched, matchConfidence: 100, matchReason: `Barcode: ${code}` });
@@ -300,76 +305,103 @@ const IdentifyProduct = () => {
         } catch (e) {}
       }
 
-      // Visual / Color signature analysis
-      const frameColor = computeColorSignature(canvas, ctx);
+      // Crop the center reticle area where the product is positioned
+      const cropW = vWidth * 0.65;
+      const cropH = vHeight * 0.65;
+      const cropX = (vWidth - cropW) / 2;
+      const cropY = (vHeight - cropH) / 2;
 
-      // Rank catalog items based on similarity & name / visual likeness
-      const scoredCandidates = items.map(item => {
-        // Base score with pseudo-visual score based on color distance and catalog match
-        let score = 75;
-        // Sweets with amber/yellow tones
-        if (frameColor.r > 150 && frameColor.g > 110) {
-          if ((item.name || '').toLowerCase().includes('laddu') || 
-              (item.name || '').toLowerCase().includes('halwa') ||
-              (item.name || '').toLowerCase().includes('mysore')) {
-            score += 18;
-          }
-        }
-        // White/milk items
-        if (frameColor.r > 170 && frameColor.g > 170 && frameColor.b > 170) {
-          if ((item.name || '').toLowerCase().includes('kova') || 
-              (item.name || '').toLowerCase().includes('kalakand') ||
-              (item.name || '').toLowerCase().includes('peda')) {
-            score += 18;
-          }
-        }
-        // General randomized variation to rank top 3 candidates cleanly
-        const variance = Math.abs((item.id.charCodeAt(0) || 0) % 15);
-        const finalScore = Math.min(96, score + variance);
+      const cropCanvas = document.createElement('canvas');
+      cropCanvas.width = 120;
+      cropCanvas.height = 120;
+      const cropCtx = cropCanvas.getContext('2d');
+      cropCtx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, 120, 120);
 
-        return {
-          ...item,
-          matchConfidence: finalScore,
-          matchReason: `Visual Similarity & Color Analysis (${finalScore}%)`
-        };
+      // Save preview snapshot of what camera saw
+      const snapshotUrl = cropCanvas.toDataURL('image/jpeg', 0.85);
+      setCapturedSnapshot(snapshotUrl);
+
+      // Extract visual features of camera capture
+      const cameraFeatures = extractImageFeatures(cropCanvas, 64, 64);
+
+      // Compare against every item with an image in the catalog
+      const comparisonList = await Promise.all(
+        items.map(async (item) => {
+          let itemFeatures = catalogFeaturesRef.current[item.id];
+          if (!itemFeatures && item.image && item.image !== DEFAULT_ITEM_IMAGE) {
+            try {
+              itemFeatures = await extractFeaturesFromUrl(item.image, 2500);
+              catalogFeaturesRef.current[item.id] = itemFeatures;
+            } catch (e) {}
+          }
+
+          if (!itemFeatures) {
+            return { item, similarity: 0, hasImage: false };
+          }
+
+          const similarity = compareFeatures(cameraFeatures, itemFeatures);
+          return { item, similarity, hasImage: true };
+        })
+      );
+
+      // Filter only items that have product images and sort by similarity descending
+      const rankedMatches = comparisonList
+        .filter(r => r.hasImage && r.similarity > 0)
+        .sort((a, b) => b.similarity - a.similarity);
+
+      if (rankedMatches.length === 0) {
+        toast.error("No product photos found in catalog to compare against");
+        setScannerPaused(false);
+        setIsAnalyzing(false);
+        return;
+      }
+
+      const topResult = rankedMatches[0];
+      const topPercentage = Math.round(topResult.similarity * 100);
+
+      const alternateCandidates = rankedMatches.slice(1, 5).map(r => ({
+        ...r.item,
+        matchConfidence: Math.round(r.similarity * 100),
+        matchReason: `Visual Similarity (${Math.round(r.similarity * 100)}%)`
+      }));
+
+      playBeep();
+      setMatchedProduct({
+        ...topResult.item,
+        matchConfidence: topPercentage,
+        matchReason: `Product Photo Match (${topPercentage}%)`
       });
+      setCandidateMatches(alternateCandidates);
+      setAddQuantity(topResult.item.unit === 'Weight' ? '1.0' : '1');
 
-      scoredCandidates.sort((a, b) => b.matchConfidence - a.matchConfidence);
-
-      const topMatch = scoredCandidates[0];
-      const otherCandidates = scoredCandidates.slice(1, 4);
-
-      if (topMatch) {
-        playBeep();
-        setMatchedProduct(topMatch);
-        setCandidateMatches(otherCandidates);
-        setAddQuantity(topMatch.unit === 'Weight' ? '1.0' : '1');
-        toast.success(`Identified: ${topMatch.name}!`, { icon: '✨' });
+      if (topPercentage >= 50) {
+        toast.success(`Matched: ${topResult.item.name} (${topPercentage}% match)!`, { icon: '🎯' });
+      } else {
+        toast(`Best match: ${topResult.item.name} (${topPercentage}%). Check candidates below if not exact.`, { icon: 'ℹ️' });
       }
     } catch (err) {
-      console.error("Identification error:", err);
-      toast.error("Failed to analyze frame");
+      console.error("Visual recognition error:", err);
+      toast.error("Failed to analyze product image");
       setScannerPaused(false);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  // Resume camera scanning
   const handleScanAnother = () => {
     setMatchedProduct(null);
     setCandidateMatches([]);
+    setCapturedSnapshot(null);
     setScannerPaused(false);
     setLastAddedSuccess(null);
   };
 
-  // Helper to get existing stock for the matched item
   const getExistingStock = (itemId) => {
     const entry = storeStockMap[itemId];
     return entry ? Number(entry.currentStock || 0) : 0;
   };
 
-  // Handle adding quantity to store stock
+  // Add identified product quantity to store stock
   const handleAddToStock = async () => {
     if (!selectedStoreId) return toast.error("Please select a store first");
     if (!matchedProduct) return toast.error("No product selected");
@@ -415,7 +447,7 @@ const IdentifyProduct = () => {
     }
   };
 
-  // Filtered fallback items when searching
+  // Filtered manual fallback items
   const filteredCatalogItems = useMemo(() => {
     if (!searchFallback) return [];
     return items
@@ -440,11 +472,11 @@ const IdentifyProduct = () => {
         <div className="identify-header-info">
           <div className="identify-header-badge">
             <ScanLine size={15} />
-            <span>AI & Camera Product Identifier</span>
+            <span>Product Visual Scanner</span>
           </div>
           <h1>Identify Product & Restock</h1>
           <p>
-            Aim camera at product or barcode to auto-detect the sweet or snack, preview current store stock, and restock instantly
+            Capture camera photo to compare directly against product catalog images, preview current store stock, and restock
           </p>
         </div>
 
@@ -475,12 +507,12 @@ const IdentifyProduct = () => {
 
       {/* Main Dual-Column Content */}
       <div className="identify-grid">
-        {/* Left Column: Camera Viewfinder & Scanner */}
+        {/* Left Column: Camera Viewfinder & Controls */}
         <div className="identify-camera-card">
           <div className="identify-camera-header">
             <div className="identify-status-pill">
               <span className={`identify-pulse-dot ${isCameraActive ? 'active' : ''}`} />
-              <span>{isCameraActive ? (scannerPaused ? 'Scan Paused (Match Found)' : 'Live Camera Feed') : 'Camera Inactive'}</span>
+              <span>{isCameraActive ? (scannerPaused ? 'Capture Complete' : 'Live Camera Active') : 'Camera Inactive'}</span>
             </div>
 
             <div className="identify-cam-actions">
@@ -531,20 +563,19 @@ const IdentifyProduct = () => {
                   <div className="reticle-corner bottom-left" />
                   <div className="reticle-corner bottom-right" />
 
-                  {/* Scanning laser beam animation */}
                   {!scannerPaused && isCameraActive && (
                     <div className="identify-scan-laser" />
                   )}
 
                   <div className="identify-reticle-label">
-                    {scannerPaused ? "Product Matched" : "Align product or barcode in center"}
+                    {scannerPaused ? "Photo Captured" : "Center sweet or barcode here"}
                   </div>
                 </div>
               </>
             )}
           </div>
 
-          {/* Camera Controls Bar */}
+          {/* Action Button */}
           <div className="identify-cam-footer">
             {scannerPaused ? (
               <button
@@ -567,7 +598,7 @@ const IdentifyProduct = () => {
                 ) : (
                   <Camera size={16} />
                 )}
-                <span>Capture & Identify Image</span>
+                <span>Compare & Match Product Photo</span>
               </button>
             )}
           </div>
@@ -590,7 +621,6 @@ const IdentifyProduct = () => {
               )}
             </div>
 
-            {/* Quick dropdown results */}
             {filteredCatalogItems.length > 0 && (
               <div className="identify-search-results">
                 {filteredCatalogItems.map(item => (
@@ -598,8 +628,9 @@ const IdentifyProduct = () => {
                     key={item.id}
                     className="identify-search-item"
                     onClick={() => {
-                      setMatchedProduct({ ...item, matchConfidence: 100, matchReason: 'Manual Search Selection' });
+                      setMatchedProduct({ ...item, matchConfidence: 100, matchReason: 'Manual Selection' });
                       setCandidateMatches([]);
+                      setCapturedSnapshot(null);
                       setScannerPaused(true);
                       setAddQuantity(item.unit === 'Weight' ? '1.0' : '1');
                       setSearchFallback('');
@@ -622,7 +653,7 @@ const IdentifyProduct = () => {
           </div>
         </div>
 
-        {/* Right Column: Matched Product Card & Restock Action */}
+        {/* Right Column: Matched Product Card & Stock Restock */}
         <div className="identify-result-column">
           {matchedProduct ? (
             <motion.div
@@ -638,9 +669,32 @@ const IdentifyProduct = () => {
                   <span>{matchedProduct.matchConfidence || 95}% Match</span>
                 </div>
                 <span className="identify-match-reason">
-                  {matchedProduct.matchReason || 'Visual AI Match'}
+                  {matchedProduct.matchReason}
                 </span>
               </div>
+
+              {/* Visual Comparison: Camera Photo vs Catalog Photo */}
+              {capturedSnapshot && (
+                <div className="identify-visual-comparison">
+                  <div className="identify-comp-box">
+                    <span className="identify-comp-label">Captured Photo</span>
+                    <img src={capturedSnapshot} alt="Captured" className="identify-comp-img" />
+                  </div>
+                  <div className="identify-comp-vs">
+                    <Eye size={16} />
+                    <span>Visual Match</span>
+                  </div>
+                  <div className="identify-comp-box">
+                    <span className="identify-comp-label">Catalog Photo</span>
+                    <img
+                      src={matchedProduct.image || DEFAULT_ITEM_IMAGE}
+                      alt={matchedProduct.name}
+                      className="identify-comp-img"
+                      onError={(e) => { e.target.src = DEFAULT_ITEM_IMAGE; }}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Product Info Row */}
               <div className="identify-product-summary">
@@ -767,10 +821,10 @@ const IdentifyProduct = () => {
                 </button>
               </div>
 
-              {/* Candidate Alternate Matches (if AI picked top among candidates) */}
+              {/* Alternate Candidates List */}
               {candidateMatches.length > 0 && (
                 <div className="identify-candidates-section">
-                  <span className="identify-candidates-title">Other possible matches:</span>
+                  <span className="identify-candidates-title">Did you mean another sweet? (Top photo matches):</span>
                   <div className="identify-candidates-list">
                     {candidateMatches.map(cand => (
                       <div
@@ -789,7 +843,7 @@ const IdentifyProduct = () => {
                         />
                         <div className="info">
                           <span className="cand-name">{cand.name}</span>
-                          <span className="cand-sub">₹{cand.price} • {cand.matchConfidence}%</span>
+                          <span className="cand-sub">₹{cand.price} • {cand.matchConfidence}% photo likeness</span>
                         </div>
                         <button className="select-btn">Select</button>
                       </div>
@@ -805,20 +859,20 @@ const IdentifyProduct = () => {
               </div>
               <h3>Waiting for Product Scan</h3>
               <p>
-                Point the camera at any item or barcode on the left, or click <strong>Capture & Identify Image</strong> to automatically recognize sweets and snacks.
+                Aim your camera at any sweet or snack on the left and click <strong>Compare & Match Product Photo</strong> to match against your catalog photos.
               </p>
               <div className="identify-hints-list">
                 <div className="identify-hint-item">
-                  <Zap size={14} className="hint-icon" />
-                  <span>Instant barcode detection for tagged sweets and beverages</span>
+                  <Eye size={14} className="hint-icon" />
+                  <span>Compares camera frame directly with your uploaded product images</span>
                 </div>
                 <div className="identify-hint-item">
-                  <Sparkles size={14} className="hint-icon" />
-                  <span>Visual color and texture recognition for unpacked trays</span>
+                  <Zap size={14} className="hint-icon" />
+                  <span>Instant barcode auto-detection if packaging has a barcode</span>
                 </div>
                 <div className="identify-hint-item">
                   <Boxes size={14} className="hint-icon" />
-                  <span>Instant one-click restock with live audit logging</span>
+                  <span>Direct one-click addition to store stock</span>
                 </div>
               </div>
             </div>
