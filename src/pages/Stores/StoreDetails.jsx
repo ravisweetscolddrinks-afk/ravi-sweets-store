@@ -33,6 +33,7 @@ const DEFAULT_ITEM_IMAGE = logo;
 
 
 import { db } from '../../config/firebase';
+import { deductStockOnBillSettle } from '../../utils/stockService';
 import { 
   doc, 
   getDoc, 
@@ -294,6 +295,10 @@ const StoreDetails = () => {
         date: new Date().toLocaleDateString()
       };
       await addDoc(collection(db, 'stores', id, 'bills'), billData);
+      
+      // Automatically decrease from the store stock
+      await deductStockOnBillSettle(id, cart, billId);
+
       toast.success(`Bill Settled: ${billId}`);
       setCart([]);
       setPosDiscount('');

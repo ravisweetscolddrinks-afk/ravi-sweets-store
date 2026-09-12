@@ -3,6 +3,7 @@ import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import PortalLayout from '../Shared/PortalLayout';
 import { generateReceiptHTML, generateOrderReceiptHTML } from '../../utils/printReceiptHelper';
 import { usePrinter } from '../../context/PrinterContext';
+import { deductStockOnBillSettle } from '../../utils/stockService';
 
 
 
@@ -2195,6 +2196,10 @@ const StorePortal = () => {
       
       const docRef = await addDoc(collection(db, 'bills'), billData);
       await addDoc(collection(db, 'stores', id, 'bills'), { ...billData, id: docRef.id }).catch(() => {});
+      
+      // Automatically decrease from the store stock
+      await deductStockOnBillSettle(id, cart, billId);
+      
       toast.success(`Bill settled successfully: ${billId}`);
       
       setCart([]);

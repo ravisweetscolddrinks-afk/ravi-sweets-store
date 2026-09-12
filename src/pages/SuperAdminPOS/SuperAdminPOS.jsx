@@ -32,6 +32,7 @@ import { collection, addDoc, getDocs, doc, updateDoc, query, orderBy, onSnapshot
 import toast from 'react-hot-toast';
 import CustomDropdown from '../../components/Common/CustomDropdown';
 import CustomDatePicker from '../../components/Common/CustomDatePicker';
+import { deductStockOnBillSettle, subscribeStoreStock } from '../../utils/stockService';
 import logo from '../../assets/logo.png';
 import './SuperAdminPOS.css';
 
@@ -63,6 +64,7 @@ const SuperAdminPOS = () => {
   const [items, setItems] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [liveStockMap, setLiveStockMap] = useState({});
 
 
   // Active Billing State
@@ -165,6 +167,15 @@ const SuperAdminPOS = () => {
       setSavedBillsList(storeSaved);
     });
     return () => unsubSaved();
+  }, [selectedStoreId]);
+
+  // Subscribe to live store stock for stock tracking & deduction
+  useEffect(() => {
+    if (!selectedStoreId) return;
+    const unsubStock = subscribeStoreStock(selectedStoreId, (stockData) => {
+      setLiveStockMap(stockData || {});
+    });
+    return () => unsubStock();
   }, [selectedStoreId]);
 
   // Handle Store Selection Change
@@ -392,6 +403,8 @@ const SuperAdminPOS = () => {
       }
 
       if (billStatus === 'settled') {
+        // Automatically decrease from the store stock
+        await deductStockOnBillSettle(selectedStoreId, cart, billId);
         setReceiptBill(billData);
         handlePrintTrigger(billData);
       }
@@ -562,6 +575,20 @@ const SuperAdminPOS = () => {
                         </div>
                         <div className="st-pos-item-info">
                           <h4>{item.name}</h4>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '2px 0' }}>
+                            {liveStockMap[item.id] !== undefined && (
+                              <span style={{
+                                fontSize: '10px',
+                                fontWeight: '700',
+                                color: Number(liveStockMap[item.id]?.currentStock || 0) <= 0 ? '#ef4444' : Number(liveStockMap[item.id]?.currentStock || 0) <= (item.unit === 'Weight' ? 2 : 5) ? '#d97706' : '#059669',
+                                background: Number(liveStockMap[item.id]?.currentStock || 0) <= 0 ? '#fef2f2' : Number(liveStockMap[item.id]?.currentStock || 0) <= (item.unit === 'Weight' ? 2 : 5) ? '#fffbeb' : '#ecfdf5',
+                                padding: '1px 5px',
+                                borderRadius: '4px'
+                              }}>
+                                Stock: {item.unit === 'Weight' ? Number(liveStockMap[item.id]?.currentStock || 0).toFixed(3) : (liveStockMap[item.id]?.currentStock || 0)} {item.unit === 'Weight' ? 'kg' : 'pcs'}
+                              </span>
+                            )}
+                          </div>
                           <div className="st-pos-item-footer">
                             <span className="price">₹{item.price} <small>/{item.unit === 'Weight' ? 'kg' : 'pc'}</small></span>
                             {item.unit === 'Piece' ? (

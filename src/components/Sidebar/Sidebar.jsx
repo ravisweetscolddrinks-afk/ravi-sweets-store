@@ -41,6 +41,7 @@ export const menuItems = [
   { id: 'items', label: 'Products', icon: <Box />, path: '/items', section: 'Operations' },
   { id: 'categories', label: 'Collections', icon: <Tag />, path: '/categories', section: 'Operations' },
   { id: 'payments', label: 'Payments', icon: <CreditCard />, path: '/payments', section: 'Operations' },
+  { id: 'store-stock', label: 'Store Stock', icon: <Boxes />, path: '/store-stock', section: 'Operations' },
   { id: 'store-worksheet', label: 'Work Sheet', icon: <ClipboardList />, path: '/store-worksheet', section: 'Operations' },
   { id: 'stores', label: 'Stores', icon: <Store />, path: '/stores', section: 'Operations' },
   { id: 'manufacturing', label: 'Manufacturing', icon: <Factory />, path: '/manufacturing', section: 'Operations' },
