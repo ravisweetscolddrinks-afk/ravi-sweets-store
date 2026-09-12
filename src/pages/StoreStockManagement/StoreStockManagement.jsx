@@ -425,24 +425,20 @@ const StoreStockManagement = () => {
   }, [items, storeStockMap]);
 
   return (
-    <div className="store-stock-page">
+    <div className="stock-container">
       {/* Top Header */}
-      <div className="stock-header-card">
-        <div className="stock-header-title-area">
-          <div className="stock-header-badge">
-            <Boxes size={18} />
-            <span>Store Inventory Management</span>
-          </div>
-          <h1 className="stock-page-title">Store Stock Management</h1>
-          <p className="stock-page-subtitle">
-            Manage real-time product quantities, manual restocks, batch additions/deductions, and automatic POS sales deductions.
+      <div className="stock-header">
+        <div className="stock-header-info">
+          <h1>Store Stock Management</h1>
+          <p>
+            Track real-time inventory, restock additions, wastage, and automatic POS sales deductions
           </p>
         </div>
 
-        {/* Store Selector & Actions */}
+        {/* Store Selector & Header Actions */}
         <div className="stock-header-controls">
           <div className="stock-store-picker">
-            <span className="stock-picker-label">Select Outlet Store:</span>
+            <span className="stock-picker-label">Store:</span>
             <CustomDropdown
               options={storeOptions}
               value={selectedStoreId}
@@ -450,30 +446,28 @@ const StoreStockManagement = () => {
                 setSelectedStoreId(val);
                 setEditState({});
               }}
-              placeholder="Choose Store"
-              icon={<StoreIcon size={16} />}
+              placeholder="Select Store"
+              icon={<StoreIcon size={15} />}
               className="stock-dropdown-component"
             />
           </div>
 
-          <div className="stock-quick-btns">
-            <button
-              className="stock-btn-secondary"
-              onClick={() => setShowLogsModal(true)}
-              title="View Stock Movement Audit Logs"
-            >
-              <History size={16} />
-              <span>Stock Logs</span>
-            </button>
-            <button
-              className="stock-btn-secondary"
-              onClick={exportStockExcel}
-              title="Export Stock Report to Excel"
-            >
-              <FileSpreadsheet size={16} />
-              <span>Export</span>
-            </button>
-          </div>
+          <button
+            className="stock-header-btn"
+            onClick={() => setShowLogsModal(true)}
+            title="View Stock Movement Audit Logs"
+          >
+            <History size={15} />
+            <span>Audit Logs</span>
+          </button>
+          <button
+            className="stock-header-btn"
+            onClick={exportStockExcel}
+            title="Export Stock Report to Excel"
+          >
+            <FileSpreadsheet size={15} />
+            <span>Export</span>
+          </button>
         </div>
       </div>
 
