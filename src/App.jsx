@@ -38,6 +38,7 @@ import BarcodeGenerator from './pages/BarcodeGenerator/BarcodeGenerator';
 import Vendors from './pages/Vendors/Vendors';
 import Inventory from './pages/Inventory/Inventory';
 import StoreStockManagement from './pages/StoreStockManagement/StoreStockManagement';
+import IdentifyProduct from './pages/IdentifyProduct/IdentifyProduct';
 import { Toaster } from 'react-hot-toast';
 
 import { NotificationProvider } from './context/NotificationContext';
@@ -108,6 +109,7 @@ function App() {
           <Route path="/store-worksheet" element={<ProtectedRoute><Layout><StoreWorkSheet /></Layout></ProtectedRoute>} />
           <Route path="/store-stock" element={<ProtectedRoute><Layout><StoreStockManagement /></Layout></ProtectedRoute>} />
           <Route path="/store-stock-management" element={<ProtectedRoute><Layout><StoreStockManagement /></Layout></ProtectedRoute>} />
+          <Route path="/identify-product" element={<ProtectedRoute><Layout><IdentifyProduct /></Layout></ProtectedRoute>} />
 
           <Route path="/inventory" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />
           <Route path="/inventory/:tab" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />

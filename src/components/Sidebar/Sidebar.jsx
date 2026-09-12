@@ -22,6 +22,7 @@ import {
   Barcode,
   Boxes,
   Truck,
+  ScanLine,
   X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -42,6 +43,7 @@ export const menuItems = [
   { id: 'categories', label: 'Collections', icon: <Tag />, path: '/categories', section: 'Operations' },
   { id: 'payments', label: 'Payments', icon: <CreditCard />, path: '/payments', section: 'Operations' },
   { id: 'store-stock', label: 'Store Stock', icon: <Boxes />, path: '/store-stock', section: 'Operations' },
+  { id: 'identify-product', label: 'Identify Product', icon: <ScanLine />, path: '/identify-product', section: 'Operations' },
   { id: 'store-worksheet', label: 'Work Sheet', icon: <ClipboardList />, path: '/store-worksheet', section: 'Operations' },
   { id: 'stores', label: 'Stores', icon: <Store />, path: '/stores', section: 'Operations' },
   { id: 'manufacturing', label: 'Manufacturing', icon: <Factory />, path: '/manufacturing', section: 'Operations' },
